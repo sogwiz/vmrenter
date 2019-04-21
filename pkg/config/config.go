@@ -2,11 +2,11 @@ package config
 
 import "os"
 
-var URLDBConn string
+var urldbConn string
 
 func GetURLDBConn() string {
-	if URLDBConn == "" {
-		URLDBConn = os.Getenv("URL_DB_CONN")
+	if urldbConn == "" {
+		urldbConn = os.Getenv("URL_DB_CONN")
 	}
-	return URLDBConn
+	return urldbConn
 }
