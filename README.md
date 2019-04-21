@@ -7,3 +7,6 @@ IntelliJ Preferences -> Languages & Frameworks -> Go -> Go Module (vgo) -> Enabl
 URL_DB_CONN
 DEFAULT_USERNAME
 DEFAULT_PASSWORD
+
+# To import data from CSV
+run pkg/utils/DataImportUtils_test.go/TestGetNodesFromCSV with the csv file
