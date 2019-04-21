@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"vmrenter/pkg/config"
 	"vmrenter/pkg/mapr"
 
 	"vmrenter/pkg/models"
@@ -33,7 +34,7 @@ func getAvailableSharedNodes(operatingSystem string) (n []models.Node) {
 func start(c *cli.Context) error {
 	filePath := c.String("file")
 	clusterID := c.String("cluster")
-	config.urldbConn = c.String("urldbconn")
+	config.SetURLDBConn(c.String("urldbconn"))
 
 	fmt.Println("Using config", "filePath=", filePath, "clusterId=", clusterID)
 
