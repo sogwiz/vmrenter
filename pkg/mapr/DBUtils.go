@@ -3,6 +3,8 @@ package mapr
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/models"
@@ -10,7 +12,8 @@ import (
 	client "github.com/mapr/maprdb-go-client"
 )
 
-const tableName = "/user/mapr/nodes"
+const tableNodes = "/user/mapr/nodes"
+const tableReservations = "/user/mapr/reservations"
 
 func getConnection() (*client.Connection, error) {
 
@@ -49,18 +52,59 @@ func getAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 	defer connection.Close()
 
 	// Options for find request
-	options := &client.FindOptions{ResultAsDocument: true}
+	// THIS IS CRITICAL - must be FALSE
+	options := &client.FindOptions{ResultAsDocument: false}
 
-	store, err := connection.GetStore(tableName)
+	store, err := connection.GetStore(tableNodes)
 	if err != nil {
 		panic(err)
 	}
 
 	// query for nodes where the ExpiresAt field has already passed
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeJson.OperatingSystem.Name":"(?i)%s"}},{"$eq":{"Available":true}},{"$lt":{"ExpiresAT": "%s"}}] }}`, operatingSystem, time.Now().Add(3*24*time.Hour).Format(time.RFC3339))
+	//now.Add(3*24*time.Hour)
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeJson.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}}] }}`, operatingSystem, time.Now().Format(time.RFC3339))
 	fmt.Println(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
+	if err != nil {
+		panic(err)
+	}
+
+	nodeDBJsons := make([]models.NodeDBJson, 0)
+
+	// Print OJAI Documents from document stream
+	for _, doc := range findResult.DocumentList() {
+		tmpNode := models.NodeDBJson{}
+		tmp, _ := json.Marshal(doc)
+		//fmt.Println(err)
+		//fmt.Println(string(tmp))
+		err = json.Unmarshal(tmp, &tmpNode)
+		nodeDBJsons = append(nodeDBJsons, tmpNode)
+		//fmt.Println(err)
+		//fmt.Println(tmpNode)
+	}
+
+	return nodeDBJsons
+}
+
+func getAllNodes() []models.NodeDBJson {
+	connection, err := getConnection()
+	if err != nil {
+		fmt.Println("error getting connection", err)
+	}
+
+	// this will get called when function exits after this point, irregardless of returning a value or error
+	defer connection.Close()
+
+	// Options for find request
+	options := &client.FindOptions{ResultAsDocument: false}
+
+	store, err := connection.GetStore(tableNodes)
+	if err != nil {
+		panic(err)
+	}
+
+	findResult, err := store.FindAll(options)
 	if err != nil {
 		panic(err)
 	}
@@ -92,9 +136,9 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 	defer connection.Close()
 
 	// Options for find request
-	options := &client.FindOptions{ResultAsDocument: true}
+	options := &client.FindOptions{ResultAsDocument: false}
 
-	store, err := connection.GetStore(tableName)
+	store, err := connection.GetStore(tableNodes)
 	if err != nil {
 		panic(err)
 	}
@@ -170,7 +214,54 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 
 }
 
-func WriteToDBWithTable(inputStr string, table string) error {
+func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
+	fmt.Println(nodeID)
+	connectionString := config.GetURLDBConn()
+
+	storeName := tableNodes
+
+	if connectionString == "" {
+		panic("Connection string must not be empty")
+	}
+	connection, err := client.MakeConnection(connectionString)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// this will get called when function exits after this point, irregardless of returning a value or error
+	defer connection.Close()
+
+	store, err := connection.GetStore(storeName)
+
+	if err != nil {
+		panic(err)
+	}
+
+	mutation := map[string]interface{}{"$set": []interface{}{
+		map[string]interface{}{"ExpiresAT": expiresAT},
+		map[string]interface{}{"ClusterID": clusterID},
+	},
+	}
+	//mutation := map[string]interface{}{"$set": map[string]interface{}{"ExpiresAT": expiresAT}}
+	//mutation := map[string]interface{}{"$set": []interface{}{{"ExpiresAT": expiresAT},{"ClusterID": clusterID}}}
+	//mutationStr := "{\"$set\":[{\"ExpiresAT\":" + expiresAT + "},{\"ClusterID\":" + clusterID + "}]}"
+
+	//mutation := map[string]interface{}{"$set": map[string]interface{}{"ExpiresAT": expiresAT}}
+	docID := client.BosiFromString(nodeID)
+	//docMutation := client.
+	docMutation := client.MosmFromMap(mutation)
+
+	err = store.Update(docID, docMutation)
+
+	if err != nil {
+		fmt.Println("Error updating node", err)
+		return err
+	}
+	return nil
+}
+
+func WriteToDBWithTable(inputStr string, table string) (*client.Document, error) {
 	fmt.Println("The time is", time.Now())
 
 	connectionString := config.GetURLDBConn()
@@ -199,7 +290,7 @@ func WriteToDBWithTable(inputStr string, table string) error {
 	newDocument, err := connection.CreateDocumentFromString(inputStr)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = store.InsertOrReplaceDocument(newDocument)
@@ -224,30 +315,81 @@ func WriteToDBWithTable(inputStr string, table string) error {
 	//
 	//fmt.Println(iterations)
 
-	return nil
+	return newDocument, err
 }
 
-func WriteToDB(inputStr string) error {
-	return WriteToDBWithTable(inputStr, tableName)
+func WriteToDB(inputStr string) (*client.Document, error) {
+	return WriteToDBWithTable(inputStr, tableNodes)
 }
 
-func MakeReservation(clusterID string, nodes []models.Node, jenkinsJobURL string) error {
-	var s struct {
-		ID            string `json:"_id"`
-		ClusterID     string `json:"ClusterID"`
-		Node          models.Node
-		JenkinsJobURL string
-		ExpiresAt     time.Time
-	}
-	s.ClusterID = clusterID
-	s.Node = nodes[0]
+/**
+	this has to update 2 tables
+ - 1. nodes table : update the clusterID and expiresAT for each node
+ - 2. reservations table:
+*/
+func MakeReservation(clusterID string, nodes []models.NodeDBJson, jenkinsJobURL string, reservationType string) (models.Reservation, error) {
 	now := time.Now()
-	s.ID = s.Node.Host + now.Format("2006-01-02_150405")
-	s.JenkinsJobURL = jenkinsJobURL
-	s.ExpiresAt = now.Add(24 * time.Hour)
+	expiry := now.Add(24 * time.Hour)
 
-	by, _ := json.Marshal(&s)
+	var wg sync.WaitGroup
+	for i, _ := range nodes {
+		nodes[i].ExpiresAT = expiry.Format(time.RFC3339)
+		nodes[i].ClusterID = clusterID
+
+		node := nodes[i]
+
+		wg.Add(1)
+		go func(node models.NodeDBJson) {
+			defer wg.Done()
+			err := ReserveNode(node.ID, node.ExpiresAT, node.ClusterID)
+			if err != nil {
+				fmt.Println("Found error for node", node, err)
+			}
+		}(node)
+	}
+	wg.Wait()
+
+	reservation := models.Reservation{
+		ID:              "cluster_" + now.Format("2006-01-02_150405"),
+		CreatedAt:       now.Format("2006-01-02_150405"),
+		ExpiresAt:       expiry.Format("2006-01-02_150405"),
+		JenkinsJobURL:   jenkinsJobURL,
+		Nodes:           nodes,
+		ReservationType: strings.ToLower(reservationType),
+	}
+
+	by, _ := json.Marshal(&reservation)
 	a := string(by)
 
-	return WriteToDB(a)
+	_, error := WriteToDBWithTable(a, tableReservations)
+	return reservation, error
+}
+
+func reset(tableName string) error {
+	connectionString := config.GetURLDBConn()
+
+	//options := &client.ConnectionOptions{MaxAttempt:3, WaitBetweenSeconds:10, CallTimeoutSeconds:60}
+
+	if connectionString == "" {
+		panic("Connection string must not be empty")
+	}
+	connection, err := client.MakeConnection(connectionString)
+
+	if err != nil {
+		panic(err)
+	}
+
+	// this will get called when function exits after this point, irregardless of returning a value or error
+	defer connection.Close()
+
+	error := connection.DeleteStore(tableName)
+	if error != nil {
+		fmt.Println("Couldn't delete table ", tableName, error)
+	}
+	_, error = connection.CreateStore(tableName)
+	if error != nil {
+		fmt.Println("Couldn't create table ", tableName, error)
+	}
+
+	return error
 }

@@ -17,17 +17,16 @@ type NodeDBJson struct {
 	NodeJson  Node
 	ClusterID string
 	ExpiresAT string
-	Available bool
 }
 
 type Esxi struct {
-	ID     string
+	ID     int
 	States []State
 }
 
 type State struct {
 	Name       string
-	SnapshotID string
+	SnapshotID int
 }
 
 type OperatingSystem struct {
@@ -43,4 +42,14 @@ type Cluster struct {
 
 type FileContent struct {
 	Clusters []Cluster
+}
+
+type Reservation struct {
+	ID              string `json:"_id"`
+	CreatedAt       string
+	ExpiresAt       string
+	JenkinsJobURL   string
+	Nodes           []NodeDBJson
+	ClusterID       string
+	ReservationType string
 }

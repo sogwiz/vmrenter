@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"vmrenter/pkg/mapr"
 
@@ -35,13 +36,23 @@ func TestDataSeed(t *testing.T) {
 
 	listOfMaps := make([]map[string]interface{}, 0)
 
+	var wg sync.WaitGroup
 	for _, node := range nodes {
 		//nodeJsonStr := getNodeJsonDocString(node)
 		mapIntface := getNodeJsonDocMap(node)
 		mapIntface["_id"] = node.ID
 		listOfMaps = append(listOfMaps, mapIntface)
-		mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+
+		wg.Add(1)
+		go func(mapIntface map[string]interface{}) {
+			defer wg.Done()
+			error := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+			if error != nil {
+				fmt.Println("Error writing to table", error)
+			}
+		}(mapIntface)
 	}
+	wg.Wait()
 
 	assert.True(t, len(listOfMaps) > 0, "couldn't load nodes to map")
 

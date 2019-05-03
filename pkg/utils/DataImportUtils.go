@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"vmrenter/pkg/models"
 
@@ -111,7 +112,8 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 			continue
 		}
 
-		//esxiID, _ := strconv.Atoi(line[5])
+		esxiID, _ := strconv.Atoi(line[5])
+		snapshotID, _ := strconv.Atoi(line[6])
 		node := models.Node{
 			ID:           line[0],
 			Host:         line[1],
@@ -119,8 +121,8 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 			EsxiIP:       line[3],
 			EsxiServerID: line[4],
 			Esxi: models.Esxi{
-				ID:     line[5],
-				States: []models.State{{Name: line[6], SnapshotID: line[7]}},
+				ID:     esxiID,
+				States: []models.State{{Name: line[7], SnapshotID: snapshotID}},
 			},
 			OperatingSystem: models.OperatingSystem{
 				Name:    line[8],
@@ -138,9 +140,8 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 
 func getNodeJsonDocMap(node models.Node) map[string]interface{} {
 	nodeDbJson := models.NodeDBJson{
-		NodeJson:  node,
-		ID:        node.ID,
-		Available: true,
+		NodeJson: node,
+		ID:       node.ID,
 	}
 
 	return structs.Map(nodeDbJson)
@@ -149,9 +150,8 @@ func getNodeJsonDocMap(node models.Node) map[string]interface{} {
 
 func getNodeJsonDocString(node models.Node) string {
 	nodeDbJson := models.NodeDBJson{
-		NodeJson:  node,
-		ID:        node.ID,
-		Available: true,
+		NodeJson: node,
+		ID:       node.ID,
 	}
 
 	nodeJson, err := json.Marshal(nodeDbJson)

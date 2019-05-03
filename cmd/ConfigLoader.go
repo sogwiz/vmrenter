@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"vmrenter/pkg/config"
-	"vmrenter/pkg/mapr"
 
 	"vmrenter/pkg/models"
 
@@ -51,15 +50,17 @@ func start(c *cli.Context) error {
 		fmt.Println("Error during unmarshal", err)
 	}
 
+	/*=
 	nodes := getNodesInCluster(clusterID)
 	for _, node := range nodes {
 		fmt.Println(node.Host)
 	}
 
-	err = mapr.MakeReservation(clusterID, nodes, "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/")
+	_, err := mapr.MakeReservation(clusterID, nodes, "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
 	if err != nil {
 		fmt.Println("error calling MakeReservation", err)
 	}
+	*/
 
 	return nil
 }

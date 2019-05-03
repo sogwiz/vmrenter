@@ -8,5 +8,5 @@ URL_DB_CONN
 DEFAULT_USERNAME
 DEFAULT_PASSWORD
 
-# To import data from CSV
-run pkg/utils/DataImportUtils_test.go/TestGetNodesFromCSV with the csv file
+# To import data from CSV and load it into maprdb
+run pkg/utils/DataImportUtils_test.go/TestDataSeed with the csv file
