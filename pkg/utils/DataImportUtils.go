@@ -140,8 +140,8 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 
 func getNodeJsonDocMap(node models.Node) map[string]interface{} {
 	nodeDbJson := models.NodeDBJson{
-		NodeJson: node,
-		ID:       node.ID,
+		NodeObj: node,
+		ID:      node.ID,
 	}
 
 	return structs.Map(nodeDbJson)
@@ -150,8 +150,8 @@ func getNodeJsonDocMap(node models.Node) map[string]interface{} {
 
 func getNodeJsonDocString(node models.Node) string {
 	nodeDbJson := models.NodeDBJson{
-		NodeJson: node,
-		ID:       node.ID,
+		NodeObj: node,
+		ID:      node.ID,
 	}
 
 	nodeJson, err := json.Marshal(nodeDbJson)

@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"vmrenter/pkg/config"
 
+	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
 
 	"gopkg.in/urfave/cli.v2"
@@ -37,19 +36,9 @@ func start(c *cli.Context) error {
 
 	fmt.Println("Using config", "filePath=", filePath, "clusterId=", clusterID)
 
-	theFile, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		fmt.Println("Error during readFile", err)
-	}
+	configData := mapr.GetConfigObject(filePath)
 
-	//var configData map[string]interface{}
-
-	err = json.Unmarshal(theFile, &configData)
-
-	if err != nil {
-		fmt.Println("Error during unmarshal", err)
-	}
-
+	fmt.Println(configData.Rest)
 	/*=
 	nodes := getNodesInCluster(clusterID)
 	for _, node := range nodes {

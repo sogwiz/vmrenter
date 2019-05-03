@@ -62,7 +62,7 @@ func getAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 
 	// query for nodes where the ExpiresAt field has already passed
 	//now.Add(3*24*time.Hour)
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeJson.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}}] }}`, operatingSystem, time.Now().Format(time.RFC3339))
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}}] }}`, operatingSystem, time.Now().Format(time.RFC3339))
 	fmt.Println(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
@@ -327,7 +327,7 @@ func WriteToDB(inputStr string) (*client.Document, error) {
  - 1. nodes table : update the clusterID and expiresAT for each node
  - 2. reservations table:
 */
-func MakeReservation(clusterID string, nodes []models.NodeDBJson, jenkinsJobURL string, reservationType string) (models.Reservation, error) {
+func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJson, jenkinsJobURL string, reservationType string) (models.Reservation, error) {
 	now := time.Now()
 	expiry := now.Add(24 * time.Hour)
 
@@ -349,13 +349,16 @@ func MakeReservation(clusterID string, nodes []models.NodeDBJson, jenkinsJobURL 
 	}
 	wg.Wait()
 
+	reservationID := clusterID + "_" + requestor + "_" + now.Format("2006-01-02_150405")
+
 	reservation := models.Reservation{
-		ID:              "cluster_" + now.Format("2006-01-02_150405"),
+		ID:              reservationID,
 		CreatedAt:       now.Format("2006-01-02_150405"),
 		ExpiresAt:       expiry.Format("2006-01-02_150405"),
 		JenkinsJobURL:   jenkinsJobURL,
 		Nodes:           nodes,
 		ReservationType: strings.ToLower(reservationType),
+		ClusterID:       reservationID,
 	}
 
 	by, _ := json.Marshal(&reservation)
