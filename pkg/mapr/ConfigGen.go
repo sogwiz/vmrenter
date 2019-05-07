@@ -7,9 +7,9 @@ import (
 	"vmrenter/pkg/models"
 )
 
-func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool) {
+func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool, sourceConfigFilepath string) {
 	var configData models.FileContent
-	configData = GetConfigObject("/Users/sargonbenjamin/dev/src/private-installer/testing/configuration/config.json")
+	configData = GetConfigObject(sourceConfigFilepath)
 
 	//var nodes [len(reservation.Nodes)]models.Node
 
@@ -26,7 +26,11 @@ func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool
 		Name:  reservation.ClusterID,
 		Nodes: nodes,
 	}
+
+	//configData.Docker_Nodes = make([]map[string]interface{}, 0)
+	//configData.Clusters = make([]models.Cluster, 0)
 	configData.Clusters = append(configData.Clusters, clusterToReserve)
+
 	fmt.Println(configData.Clusters)
 
 	if generateESXIEntries {
@@ -34,10 +38,12 @@ func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool
 	}
 
 	outFile, _ := json.MarshalIndent(configData, "", " ")
-	error := ioutil.WriteFile("/Users/sargonbenjamin/Downloads/out1.json", outFile, 0644)
+	outFilepath := "out.json"
+	error := ioutil.WriteFile(outFilepath, outFile, 0644)
 	if error != nil {
 		fmt.Println("Couldn't write to json file", error)
 	}
+	fmt.Println("Wrote cluster " + reservation.ClusterID + " to " + outFilepath)
 }
 
 func GetConfigObject(filePath string) models.FileContent {

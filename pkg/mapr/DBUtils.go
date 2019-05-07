@@ -30,7 +30,7 @@ func IsRequestDoable(numNodes int, osName string, osVersion string) bool {
 
 	fmt.Println("Request: ", numNodes, osName)
 
-	nodeDBJsons := getAvailableNodes("", "centos")
+	nodeDBJsons := GetAvailableNodes("", "centos")
 
 	fmt.Println("Available nodes ", len(nodeDBJsons))
 	if len(nodeDBJsons) < numNodes {
@@ -42,7 +42,7 @@ func IsRequestDoable(numNodes int, osName string, osVersion string) bool {
 	return true
 }
 
-func getAvailableNodes(clusterID string, operatingSystem string) []models.NodeDBJson {
+func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDBJson {
 	connection, err := getConnection()
 	if err != nil {
 		fmt.Println("error getting connection", err)
@@ -168,6 +168,7 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 	//options := &client.ConnectionOptions{MaxAttempt:3, WaitBetweenSeconds:10, CallTimeoutSeconds:60}
 	storeName := table
 
+	//fmt.Println("Connection string is ", connectionString)
 	if connectionString == "" {
 		panic("Connection string must not be empty")
 	}
@@ -328,6 +329,11 @@ func WriteToDB(inputStr string) (*client.Document, error) {
  - 2. reservations table:
 */
 func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJson, jenkinsJobURL string, reservationType string) (models.Reservation, error) {
+
+	if len(nodes) > 5 && requestor != "sbenjamin@mapr.com" {
+		panic("Can't request more than 5 nodes")
+	}
+
 	now := time.Now()
 	expiry := now.Add(24 * time.Hour)
 
@@ -358,7 +364,7 @@ func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJs
 		JenkinsJobURL:   jenkinsJobURL,
 		Nodes:           nodes,
 		ReservationType: strings.ToLower(reservationType),
-		ClusterID:       reservationID,
+		ClusterID:       clusterID,
 	}
 
 	by, _ := json.Marshal(&reservation)
@@ -372,10 +378,12 @@ func reset(tableName string) error {
 	connectionString := config.GetURLDBConn()
 
 	//options := &client.ConnectionOptions{MaxAttempt:3, WaitBetweenSeconds:10, CallTimeoutSeconds:60}
+	fmt.Println("Connection string is: ", connectionString)
 
 	if connectionString == "" {
 		panic("Connection string must not be empty")
 	}
+
 	connection, err := client.MakeConnection(connectionString)
 
 	if err != nil {

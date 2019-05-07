@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"vmrenter/pkg/config"
 
@@ -33,23 +34,28 @@ func start(c *cli.Context) error {
 	filePath := c.String("file")
 	clusterID := c.String("cluster")
 	config.SetURLDBConn(c.String("urldbconn"))
+	dbConn := config.GetURLDBConn()
+	requestedNumNodes := c.Int("nodes")
+	requestedOperatingSystem := c.String("os")
+	emailAddr := c.String("email")
 
-	fmt.Println("Using config", "filePath=", filePath, "clusterId=", clusterID)
+	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID, "\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn)
 
-	configData := mapr.GetConfigObject(filePath)
+	//configData := mapr.GetConfigObject(filePath)
 
-	fmt.Println(configData.Rest)
-	/*=
-	nodes := getNodesInCluster(clusterID)
-	for _, node := range nodes {
-		fmt.Println(node.Host)
+	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem)
+	if len(nodes) < requestedNumNodes {
+		errorStr := "Can't full request. Only " + strconv.Itoa(len(nodes)) + " nodes available matching your request requirements"
+		panic(errorStr)
 	}
 
-	_, err := mapr.MakeReservation(clusterID, nodes, "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
+	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
 	if err != nil {
 		fmt.Println("error calling MakeReservation", err)
 	}
-	*/
+
+	fmt.Println("Reservation=", reservation)
+	mapr.GenerateConfigJson(reservation, false, filePath)
 
 	return nil
 }
@@ -61,14 +67,19 @@ func main() {
 			&cli.StringFlag{
 				Name:    "file",
 				Aliases: []string{"f"},
-				Value:   "/Users/sargonbenjamin/dev/src/private-installer/testing/configuration/config.json",
 				Usage:   "The location of the config.json file",
 			},
 			&cli.StringFlag{
 				Name:    "cluster",
 				Aliases: []string{"c"},
-				Value:   "CLUSTER_ID",
+				Value:   "sharedcluster",
 				Usage:   "The cluster id",
+			},
+			&cli.StringFlag{
+				Name:    "os",
+				Aliases: []string{"o"},
+				Value:   "centos",
+				Usage:   "The requested operating system",
 			},
 			&cli.StringFlag{
 				Name:    "urldbconn",
@@ -76,6 +87,18 @@ func main() {
 				Value:   "DBHOST:DBPORT?auth=basic;user=USERNAME;password=PASSWORD;ssl=false",
 				Usage:   "DB Connection URL",
 				EnvVars: []string{"URL_DB_CONN"},
+			},
+			&cli.StringFlag{
+				Name:    "email",
+				Aliases: []string{"e"},
+				Value:   "default@mapr.com",
+				Usage:   "Your Email Address",
+			},
+			&cli.IntFlag{
+				Name:    "nodes",
+				Aliases: []string{"n"},
+				Value:   0,
+				Usage:   "number of nodes requested to reserve",
 			},
 		},
 		Name:   "vmrenter",
