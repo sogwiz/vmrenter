@@ -24,13 +24,13 @@ func TestGetAvailableNodes(t *testing.T) {
 }
 
 func TestMakeReservation(t *testing.T) {
-	numNodes := 1
-	nodes := GetAvailableNodes("sharedpool", "centos")
+	numNodes := 7
+	nodes := GetAvailableNodes("sharedpool", "ubuntu")
 	if len(nodes) < numNodes {
 		panic("Can't fulllfill request. exiting")
 	}
 
-	reservation, error := MakeReservation("sharedcluster", "sargon", nodes[0:numNodes], "jenkinsurl", "vmsonly")
+	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
 
 	if error != nil {
 		fmt.Println("Error making reservation", error)

@@ -59,7 +59,7 @@ func TestDataSeed(t *testing.T) {
 }
 
 func TestGetNodeOperatingSystems(t *testing.T) {
-	ips := []string{"10.10.99.165",
+	/*ips := []string{"10.10.99.165",
 		"10.10.99.171",
 		"10.10.99.172",
 		"10.10.99.173",
@@ -84,6 +84,10 @@ func TestGetNodeOperatingSystems(t *testing.T) {
 		"10.10.111.38",
 		"10.10.111.39",
 		"10.10.111.40",
+	}*/
+	ips := []string{"10.10.99.178",
+		"10.10.99.179", "10.10.99.181", "10.10.99.182", "10.10.99.183",
+		"10.10.30.71", "10.10.30.72",
 	}
 	nodes := getNodeOperatingSystems(ips)
 	fmt.Println(nodes)

@@ -21,6 +21,19 @@ func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool
 		nodes[i].ExpectedServiceNames = expectedServiceNames
 	}
 
+	/*
+		var esxiServerID string
+		if len(nodes[0].EsxiServerID) > 0 {
+			esxiServerID = nodes[0].EsxiServerID
+		}
+		clusterToReserve := models.Cluster{
+			ID:           reservation.ClusterID,
+			Name:         reservation.ClusterID,
+			Nodes:        nodes,
+			EsxiServerID: esxiServerID,
+		}
+	*/
+
 	clusterToReserve := models.Cluster{
 		ID:    reservation.ClusterID,
 		Name:  reservation.ClusterID,

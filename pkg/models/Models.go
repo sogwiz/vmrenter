@@ -36,9 +36,10 @@ type OperatingSystem struct {
 }
 
 type Cluster struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Nodes []Node `json:"nodes"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	Nodes        []Node `json:"nodes"`
+	EsxiServerID string `json:"esxiServerId"`
 }
 
 type FileContent struct {
