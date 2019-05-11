@@ -1,3 +1,4 @@
+vmrenter is a tool to checkout virtual machines from a shared pool. Once a reservation is made, a configuration json file is generated that can then be used to drive the automated installation of a MapR cluster 
 
 To set this project up via IntelliJ, certain settings are required
 

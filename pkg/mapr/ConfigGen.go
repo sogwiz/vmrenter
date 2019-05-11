@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"path"
+	"path/filepath"
 	"vmrenter/pkg/models"
 )
 
@@ -51,7 +53,8 @@ func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool
 	}
 
 	outFile, _ := json.MarshalIndent(configData, "", " ")
-	outFilepath := "out.json"
+	outDir, _ := path.Split(sourceConfigFilepath)
+	outFilepath := filepath.FromSlash(outDir + "/out.json")
 	error := ioutil.WriteFile(outFilepath, outFile, 0644)
 	if error != nil {
 		fmt.Println("Couldn't write to json file", error)

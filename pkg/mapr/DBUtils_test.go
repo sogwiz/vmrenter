@@ -20,12 +20,12 @@ func TestGetUnavailableNodes(t *testing.T) {
 func TestGetAvailableNodes(t *testing.T) {
 	//getAvailableNodes("", "centos")
 	//assert.Equal(t, 1, 1)
-	fmt.Println(IsRequestDoable(20, "centos", "7"))
+	fmt.Println(IsRequestDoable(1, "centos", "7"))
 }
 
 func TestMakeReservation(t *testing.T) {
-	numNodes := 7
-	nodes := GetAvailableNodes("sharedpool", "ubuntu")
+	numNodes := 1
+	nodes := GetAvailableNodes("sharedpool", "centos")
 	if len(nodes) < numNodes {
 		panic("Can't fulllfill request. exiting")
 	}

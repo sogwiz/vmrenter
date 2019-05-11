@@ -49,6 +49,10 @@ func start(c *cli.Context) error {
 		panic(errorStr)
 	}
 
+	if len(nodes) == 0 {
+		panic("Must submit a non-zero number of nodes. eg -n 1")
+	}
+
 	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
 	if err != nil {
 		fmt.Println("error calling MakeReservation", err)
