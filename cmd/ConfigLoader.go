@@ -58,7 +58,7 @@ func start(c *cli.Context) error {
 		fmt.Println("error calling MakeReservation", err)
 	}
 
-	fmt.Println("Reservation=", reservation)
+	//fmt.Println("Reservation=", reservation)
 	mapr.GenerateConfigJson(reservation, false, filePath)
 
 	return nil
