@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"sync"
 	"testing"
+	"time"
 	"vmrenter/pkg/models"
 
 	"github.com/stretchr/testify/assert"
@@ -45,46 +45,39 @@ func TestReset(t *testing.T) {
 	reset(tableNodes)
 }
 
+func workerUnreserver(id int, jobs <-chan models.NodeDBJson, results chan<- int) {
+	for node := range jobs {
+		fmt.Println("worker", id, "started  job", node)
+		err := ReserveNode(node.ID, "", "")
+		if err != nil {
+			fmt.Println("Found error for node ", node, err)
+		}
+		time.Sleep(time.Second)
+		results <- id
+	}
+}
+
 func TestUnreserveNodes(t *testing.T) {
 	nodes := getAllNodes()
 	fmt.Println("nodes length: ", len(nodes))
 
-	var wg sync.WaitGroup
-	for _, node := range nodes {
-		wg.Add(1)
+	//only unreserve 5 at a time, concurrently
+	jobs := make(chan models.NodeDBJson, len(nodes))
+	results := make(chan int, len(nodes))
+
+	for w := 1; w <= 5; w++ {
 		//fmt.Println("iteration ", node.ID)
-		go func(node models.NodeDBJson) {
-			defer wg.Done()
-
-			err := ReserveNode(node.ID, "", "")
-			if err != nil {
-				fmt.Println("Found error for node ", node, err)
-			}
-
-		}(node)
+		go workerUnreserver(w, jobs, results)
 	}
-	wg.Wait()
 
-	/*
-		c := make(chan struct{}) // We don't need any data to be passed, so use an empty struct
+	for _, node := range nodes {
+		jobs <- node
+	}
+	close(jobs)
 
-		for _, node := range nodes {
-
-			//fmt.Println("iteration ", node.ID)
-			go func(node models.NodeDBJson) {
-
-				err := ReserveNode(node.ID, "", "")
-				if err != nil {
-					fmt.Println("Found error for node ", node, err)
-				}
-				c <- struct{}{} // signal that the routine has completed
-			}(node)
-		}
-		for i := 0; i < len(nodes); i++ {
-			<-c
-		}
-	*/
-
+	for i := 0; i < len(nodes); i++ {
+		fmt.Println("Finished with result", <-results)
+	}
 }
 
 func TestDeleteAndCreateTable(t *testing.T) {
