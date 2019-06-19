@@ -11,13 +11,13 @@ import (
 
 func TestGetNodesFromCSV(t *testing.T) {
 	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
-	nodes := getNodesFromCSV(csvFilename)
+	nodes := GetNodesFromCSV(csvFilename)
 	assert.True(t, len(nodes) > 0, "couldn't load nodes from csv to memory data model")
 }
 
 func TestGetNodeJsonDocString(t *testing.T) {
 	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
-	nodes := getNodesFromCSV(csvFilename)
+	nodes := GetNodesFromCSV(csvFilename)
 
 	nodeStrings := make([]string, 0)
 
@@ -30,16 +30,18 @@ func TestGetNodeJsonDocString(t *testing.T) {
 	assert.True(t, len(nodeStrings) > 0, "couldn't load nodes to json strings")
 }
 
+
 func TestDataSeed(t *testing.T) {
-	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
-	nodes := getNodesFromCSV(csvFilename)
+	//csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
+	csvFilename := "/home/user6bb0/Work/vm-renter/my_nodes.csv"
+	nodes := GetNodesFromCSV(csvFilename)
 
 	listOfMaps := make([]map[string]interface{}, 0)
 
 	var wg sync.WaitGroup
 	for _, node := range nodes {
 		//nodeJsonStr := getNodeJsonDocString(node)
-		mapIntface := getNodeJsonDocMap(node)
+		mapIntface := GetNodeJsonDocMap(node)
 		mapIntface["_id"] = node.ID
 		listOfMaps = append(listOfMaps, mapIntface)
 

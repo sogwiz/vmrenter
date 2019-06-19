@@ -19,9 +19,17 @@ RUN go mod download
 COPY ./ ./
 
 # Build the executable to `/app`. Mark the build as statically linked.
-RUN CGO_ENABLED=0 go build \
-    -installsuffix 'static' \
-    -o /app ./cmd
+# Check if u
+ARG update
+RUN if [ "x$update" = "x" ] ; then
+        CGO_ENABLED=0 go build \
+            -installsuffix 'static' \
+            -o /app ./upd ;
+    else
+        CGO_ENABLED=0 go build \
+            -installsuffix 'static' \
+            -o /app ./cmd
+fi
 
 # Final stage: the running container.
 FROM scratch AS final

@@ -30,19 +30,19 @@ func TestMakeReservation(t *testing.T) {
 		panic("Can't fulllfill request. exiting")
 	}
 
-	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
+	reservation, error := MakeReservation("vdz_1", "vdziuba@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
 
 	if error != nil {
 		fmt.Println("Error making reservation", error)
 	}
 
 	fmt.Println(reservation)
-	GenerateConfigJson(reservation, false, "/Users/sargonbenjamin/dev/src/private-installer/testing/configuration/config.json")
+	GenerateConfigJson(reservation, false, "/home/user6bb0/Work/vm-renter/config.json")
 }
 
 func TestReset(t *testing.T) {
-	reset(tableReservations)
-	reset(tableNodes)
+	Reset(tableReservations)
+	Reset(tableNodes)
 }
 
 func workerUnreserver(id int, jobs <-chan models.NodeDBJson, results chan<- int) {
@@ -98,3 +98,8 @@ func TestDeleteAndCreateTable(t *testing.T) {
 	fmt.Println(string(body))
 
 }
+
+// TODO: end this function
+//func CheckNodesForRAM(nodeDbJsons []models.NodeDBJson) error {
+//
+//}
