@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"sync"
 	"vmrenter/pkg/mapr"
+	"vmrenter/pkg/models"
 	"vmrenter/pkg/utils"
 )
 
@@ -12,7 +14,7 @@ var csvFilePath = "/home/user6bb0/Work/vm-renter/my_nodes1.csv"
 func main() {
 
 	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
-	partialNodes := mapr.GetPartialReservationsForNodesUpdate() // ID doesn't work, but _id does
+	partialNodes := mapr.GetPartialReservationsForNodesUpdate() // ID doesn't work, but _id does - investigate why
 	err := mapr.Reset(nodesTable)
 	if err != nil {
 		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
@@ -27,22 +29,21 @@ func main() {
 
 	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
 
-	//var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
 	// Creating NodeDBJsons from nodes
 	fmt.Println("Starting creating NodeDBJsons from nodes...")
 	for _, node := range nodes {
-		//wg.Add(1)
-
-		//go func() {
-		mapIntface := utils.GetNodeJsonDocMap(node)
-		mapIntface["_id"] = node.ID
-		listOfMaps = append(listOfMaps, mapIntface)
-		//wg.Done()
-		//}()
+		wg.Add(1)
+		go func(node models.Node) {
+			defer wg.Done()
+			mapIntface := utils.GetNodeJsonDocMap(node)
+			mapIntface["_id"] = node.ID
+			listOfMaps = append(listOfMaps, mapIntface)
+		}(node)
 	}
 
-	//wg.Wait()
+	wg.Wait()
 	fmt.Println("Finished creating NodeDBJsons from nodes!")
 
 	// Update NodeDBJsons with ClusterID, ExpiresAT
