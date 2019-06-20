@@ -424,7 +424,7 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 	}
 
 	// query for nodes where the ExpiresAt field has not passed yet
-	query := fmt.Sprintf(`{"$select":["ID","ExpiresAT","ClusterID"],"$where":{"$gt":{"ExpiresAT": "%v"}}}`, time.Now().Format(time.RFC3339))
+	query := fmt.Sprintf(`{"$select":["_id","ExpiresAT","ClusterID"],"$where":{"$gt":{"ExpiresAT":"%v"}}}`, time.Now().Format(time.RFC3339))
 
 	findResult, err := store.FindQueryString(query, options)
 	if err != nil {
