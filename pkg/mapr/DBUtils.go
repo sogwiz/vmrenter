@@ -437,12 +437,8 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 	for _, doc := range findResult.DocumentList() {
 		tmpPartialReservation := models.PartialReservationForNodesUpdate{}
 		tmp, _ := json.Marshal(doc)
-		//fmt.Println(err)
-		//fmt.Println(string(tmp))
 		err = json.Unmarshal(tmp, &tmpPartialReservation)
 		partialReservationsForNodesUpdate = append(partialReservationsForNodesUpdate, tmpPartialReservation)
-		//fmt.Println(err)
-		//fmt.Println(tmpNode)
 	}
 
 	return partialReservationsForNodesUpdate

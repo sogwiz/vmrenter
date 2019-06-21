@@ -32,26 +32,13 @@ func TestGetNodeJsonDocString(t *testing.T) {
 }
 
 func TestDataSeed(t *testing.T) {
-	//csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
-	csvFilename := "/home/user6bb0/Work/vm-renter/my_nodes.csv"
+	csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 
 	listOfMaps := make([]map[string]interface{}, 0)
 
 	var wg sync.WaitGroup
 	wg.Add(len(nodes))
-	//for _, node := range nodes {
-	//	mapIntface := GetNodeJsonDocMap(node)
-	//	mapIntface["_id"] = node.ID
-	//	go func(mapIntface map[string]interface{}) {
-	//		defer wg.Done()
-	//		err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
-	//		if err != nil {
-	//			fmt.Println("Error writing to table", err)
-	//		}
-	//	}(mapIntface)
-	//}
-	//wg.Wait()
 
 	queue := make(chan map[string]interface{}, 1)
 
