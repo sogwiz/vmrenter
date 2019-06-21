@@ -20,16 +20,17 @@ COPY ./ ./
 
 # Build the executable to `/app`. Mark the build as statically linked.
 # Check if u
-ARG update
-RUN if [ "x$update" = "x" ] ; then
-        CGO_ENABLED=0 go build \
-            -installsuffix 'static' \
-            -o /app ./upd ;
-    else
-        CGO_ENABLED=0 go build \
-            -installsuffix 'static' \
-            -o /app ./cmd
-fi
+ARG update="FALSE"
+RUN if [ $update = "TRUE" ] ;    \
+    then echo 'Building upd' ;   \
+         CGO_ENABLED=0 go build  \
+         -installsuffix 'static' \
+         -o /app ./upd ;         \
+    else echo 'Building cmd' ;   \
+         CGO_ENABLED=0 go build  \
+         -installsuffix 'static' \
+         -o /app ./cmd ;         \
+    fi
 
 # Final stage: the running container.
 FROM scratch AS final
