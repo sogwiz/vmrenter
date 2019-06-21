@@ -71,7 +71,7 @@ func start(c *cli.Context) error {
 			}
 
 			if numOfRAMPAssingNodes < requestedNumNodes {
-				log.Fatalf("You are trying to reserve %d nodes. There are %d available nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPAssingNodes, ram)
+				log.Fatalf("You are trying to reserve %d nodes. There are %d matching nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPAssingNodes, ram)
 			}
 		}
 	default: // Constraint is either absent or 0 GB which is meaningless
@@ -133,7 +133,7 @@ func main() {
 			&cli.IntFlag{
 				Name:    "ram",
 				Aliases: []string{"m"},
-				//Value:   16,
+				Value:   16,
 				Usage: "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
 			},
 		},

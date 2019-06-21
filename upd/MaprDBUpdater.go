@@ -9,7 +9,7 @@ import (
 )
 
 var nodesTable = "/user/mapr/nodes"
-var csvFilePath = "/home/user6bb0/Work/vm-renter/my_nodes.csv"
+var csvFilePath = "/home/user6bb0/Work/vm-renter/nodes.csv"
 
 func main() {
 
@@ -56,6 +56,7 @@ func main() {
 
 	// Updating NodeDBJsons with ClusterID, ExpiresAT
 	wg1 := sync.WaitGroup{}
+	m := &sync.Mutex{}
 	for _, partialNode := range partialNodes {
 		wg1.Add(1)
 		go func(partialNode models.PartialReservationForNodesUpdate) {
@@ -63,10 +64,12 @@ func main() {
 			for i := range listOfMaps {
 				nodeDBJson := listOfMaps[i]
 
+				m.Lock()
 				if partialNode.ID == nodeDBJson["_id"] {
 					nodeDBJson["ClusterID"] = partialNode.ClusterID
 					nodeDBJson["ExpiresAT"] = partialNode.ExpiresAt
 				}
+				m.Unlock()
 			}
 		}(partialNode)
 	}
@@ -91,9 +94,6 @@ func main() {
 			fmt.Println("Error writing to table", writeErr)
 		}
 	}
-	fmt.Println("Finished writing to nodes table!")
-
-	fmt.Println("Starting writing to nodes table...")
 
 	// Asynchronous writing to the table - fails because of syncPut() Investigate further
 	//var wg2 = sync.WaitGroup{}
@@ -108,6 +108,6 @@ func main() {
 	//	}(mapIntface)
 	//}
 	//wg2.Wait()
-	//fmt.Println("Finished writing to nodes table!")
+	fmt.Println("Finished writing to nodes table!")
 
 }
