@@ -9,12 +9,13 @@ import (
 )
 
 var nodesTable = "/user/mapr/nodes"
-var csvFilePath = "/home/user6bb0/Work/vm-renter/my_nodes1.csv"
+var csvFilePath = "/home/user6bb0/Work/vm-renter/my_nodes.csv"
 
 func main() {
 
+	// Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
-	partialNodes := mapr.GetPartialReservationsForNodesUpdate() // ID doesn't work, but _id does - investigate why
+	partialNodes := mapr.GetPartialReservationsForNodesUpdate()
 	err := mapr.Reset(nodesTable)
 	if err != nil {
 		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
@@ -29,36 +30,50 @@ func main() {
 
 	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
 
-	var wg sync.WaitGroup
-
 	// Creating NodeDBJsons from nodes
+	var wg sync.WaitGroup
+	nodeDbJsonQueue := make(chan map[string]interface{}, 1)
+	wg.Add(len(nodes))
+
 	fmt.Println("Starting creating NodeDBJsons from nodes...")
 	for _, node := range nodes {
-		wg.Add(1)
 		go func(node models.Node) {
-			defer wg.Done()
 			mapIntface := utils.GetNodeJsonDocMap(node)
 			mapIntface["_id"] = node.ID
-			listOfMaps = append(listOfMaps, mapIntface)
+			nodeDbJsonQueue <- mapIntface
 		}(node)
 	}
+
+	go func() {
+		for n := range nodeDbJsonQueue {
+			listOfMaps = append(listOfMaps, n)
+			wg.Done()
+		}
+	}()
 
 	wg.Wait()
 	fmt.Println("Finished creating NodeDBJsons from nodes!")
 
-	// Update NodeDBJsons with ClusterID, ExpiresAT
+	// Updating NodeDBJsons with ClusterID, ExpiresAT
+	wg1 := sync.WaitGroup{}
 	for _, partialNode := range partialNodes {
-	comparingOnePartialNodeToListOfMaps:
-		for i := range listOfMaps {
-			nodeDBJson := listOfMaps[i]
-			if partialNode.ID == nodeDBJson["_id"] {
-				nodeDBJson["ClusterID"] = partialNode.ClusterID
-				nodeDBJson["ExpiresAT"] = partialNode.ExpiresAt
-				break comparingOnePartialNodeToListOfMaps
+		wg1.Add(1)
+		go func(partialNode models.PartialReservationForNodesUpdate) {
+			defer wg1.Done()
+			for i := range listOfMaps {
+				nodeDBJson := listOfMaps[i]
+
+				if partialNode.ID == nodeDBJson["_id"] {
+					nodeDBJson["ClusterID"] = partialNode.ClusterID
+					nodeDBJson["ExpiresAT"] = partialNode.ExpiresAt
+				}
 			}
-		}
+		}(partialNode)
 	}
 
+	wg1.Wait()
+
+	// Resetting /user/mapr/node table
 	fmt.Println("Starting resetting nodes table...")
 	resetErr := mapr.Reset(nodesTable)
 	if resetErr != nil {
@@ -68,23 +83,31 @@ func main() {
 	fmt.Println("Finished resetting nodes table!")
 
 	// Updating the nodes table
-	//var wg2 sync.WaitGroup
 	fmt.Println("Starting writing to nodes table...")
-	for _, mapIntface := range listOfMaps {
 
-		//wg2.Add(1)
-		//go func(mapIntface map[string]interface{}) {
-		//defer wg2.Done()
-		error := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
-		if error != nil {
-			fmt.Println("Error writing to table", error)
+	for _, mapIntface := range listOfMaps {
+		writeErr := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+		if writeErr != nil {
+			fmt.Println("Error writing to table", writeErr)
 		}
-		//}(mapIntface)
 	}
-	//wg2.Wait()
 	fmt.Println("Finished writing to nodes table!")
 
-}
+	fmt.Println("Starting writing to nodes table...")
 
-//for
-//SeedNodesTable(csvFilePath)
+	// Asynchronous writing to the table - fails because of syncPut() Investigate further
+	//var wg2 = sync.WaitGroup{}
+	//for _, mapIntface := range listOfMaps {
+	//	wg2.Add(1)
+	//	go func(mapIntface map[string]interface{}) {
+	//		defer wg2.Done()
+	//		writeErr := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+	//		if writeErr != nil {
+	//			fmt.Println("Error writing to table", writeErr)
+	//		}
+	//	}(mapIntface)
+	//}
+	//wg2.Wait()
+	//fmt.Println("Finished writing to nodes table!")
+
+}

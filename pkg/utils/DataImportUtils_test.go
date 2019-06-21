@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 	"vmrenter/pkg/mapr"
+	"vmrenter/pkg/models"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -30,7 +31,6 @@ func TestGetNodeJsonDocString(t *testing.T) {
 	assert.True(t, len(nodeStrings) > 0, "couldn't load nodes to json strings")
 }
 
-
 func TestDataSeed(t *testing.T) {
 	//csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
 	csvFilename := "/home/user6bb0/Work/vm-renter/my_nodes.csv"
@@ -39,21 +39,40 @@ func TestDataSeed(t *testing.T) {
 	listOfMaps := make([]map[string]interface{}, 0)
 
 	var wg sync.WaitGroup
-	for _, node := range nodes {
-		//nodeJsonStr := getNodeJsonDocString(node)
-		mapIntface := GetNodeJsonDocMap(node)
-		mapIntface["_id"] = node.ID
-		listOfMaps = append(listOfMaps, mapIntface)
+	wg.Add(len(nodes))
+	//for _, node := range nodes {
+	//	mapIntface := GetNodeJsonDocMap(node)
+	//	mapIntface["_id"] = node.ID
+	//	go func(mapIntface map[string]interface{}) {
+	//		defer wg.Done()
+	//		err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+	//		if err != nil {
+	//			fmt.Println("Error writing to table", err)
+	//		}
+	//	}(mapIntface)
+	//}
+	//wg.Wait()
 
-		wg.Add(1)
-		go func(mapIntface map[string]interface{}) {
-			defer wg.Done()
-			error := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
-			if error != nil {
-				fmt.Println("Error writing to table", error)
+	queue := make(chan map[string]interface{}, 1)
+
+	for _, node := range nodes {
+		go func(node models.Node) {
+			mapIntface := GetNodeJsonDocMap(node)
+			mapIntface["_id"] = node.ID
+			err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+			if err != nil {
+				fmt.Println("Error writing to table", err)
 			}
-		}(mapIntface)
+			queue <- mapIntface
+		}(node)
 	}
+
+	go func() {
+		for n := range queue {
+			listOfMaps = append(listOfMaps, n)
+			wg.Done()
+		}
+	}()
 	wg.Wait()
 
 	assert.True(t, len(listOfMaps) > 0, "couldn't load nodes to map")
