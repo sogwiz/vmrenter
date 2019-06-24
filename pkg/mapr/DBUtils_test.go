@@ -30,14 +30,14 @@ func TestMakeReservation(t *testing.T) {
 		panic("Can't fulllfill request. exiting")
 	}
 
-	reservation, error := MakeReservation("vdz_1", "vdziuba@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
+	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
 
 	if error != nil {
 		fmt.Println("Error making reservation", error)
 	}
 
 	fmt.Println(reservation)
-	GenerateConfigJson(reservation, false, "/home/user6bb0/Work/vm-renter/config.json")
+	GenerateConfigJson(reservation, false, "/Users/sargonbenjamin/dev/src/private-installer/testing/configuration/config.json")
 }
 
 func TestReset(t *testing.T) {

@@ -98,8 +98,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "cluster",
 				Aliases: []string{"c"},
-				//Value:   "sharedcluster",
-				Value: "VMRenter_test_Centos7",
+				Value:   "sharedcluster",
 				Usage: "The cluster id",
 			},
 			&cli.StringFlag{
