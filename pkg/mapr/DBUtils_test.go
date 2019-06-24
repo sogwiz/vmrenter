@@ -30,7 +30,7 @@ func TestMakeReservation(t *testing.T) {
 		panic("Can't fulllfill request. exiting")
 	}
 
-	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
+	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly", 24)
 
 	if error != nil {
 		fmt.Println("Error making reservation", error)

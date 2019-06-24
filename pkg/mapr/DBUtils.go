@@ -143,7 +143,7 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 		panic(err)
 	}
 
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3*24*time.Hour).Format(time.RFC3339))
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3 * 24 * time.Hour).Format(time.RFC3339))
 	fmt.Println(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
@@ -328,14 +328,15 @@ func WriteToDB(inputStr string) (*client.Document, error) {
  - 1. nodes table : update the clusterID and expiresAT for each node
  - 2. reservations table:
 */
-func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJson, jenkinsJobURL string, reservationType string) (models.Reservation, error) {
+func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJson, jenkinsJobURL string,
+	reservationType string, hoursToReserve int) (models.Reservation, error) {
 
 	if len(nodes) > 5 && requestor != "sbenjamin@mapr.com" {
 		panic("Can't request more than 5 nodes")
 	}
 
 	now := time.Now()
-	expiry := now.Add(24 * time.Hour)
+	expiry := now.Add(time.Duration(hoursToReserve) * time.Hour)
 
 	var wg sync.WaitGroup
 	for i, _ := range nodes {
