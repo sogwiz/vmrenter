@@ -48,34 +48,31 @@ func start(c *cli.Context) error {
 	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem)
 	if len(nodes) < requestedNumNodes {
 		errorStr := "Can't full request. Only " + strconv.Itoa(len(nodes)) + " nodes available matching your request requirements"
-		//panic(errorStr)
 		log.Fatal(errorStr)
 	}
 
 	if len(nodes) == 0 {
-		//panic("Must submit a non-zero number of nodes. eg -n 1")
 		log.Fatal("Must submit a non-zero number of nodes. eg -n 1")
 	}
 
 	// Check if a constraint for RAM is posed at all
 	switch {
+	case !c.IsSet("ram"): // Check if the flag is set at all
+		fmt.Println("You have not provided RAM constraint for VMs in a cluster , thus RAM limitations will be neglected")
 	case ram <= 0:
 		log.Fatalf("You have provided invalid value for RAM constraint - %v. Aborting reserving.", ram)
 	case ram > 0: // Constraint is present
 		// Check if there are enough nodes with RAM equal or more than needed
-		numOfRAMPAssingNodes := 0 // Number of nodes that adhere to RAM constraints
+		numOfRAMPassingNodes := 0 // Number of nodes that adhere to RAM constraints
 		for i := range nodes {
-			if nodes[i].NodeObj.RAM < ram {
-			} else {
-				numOfRAMPAssingNodes += 1
-			}
-
-			if numOfRAMPAssingNodes < requestedNumNodes {
-				log.Fatalf("You are trying to reserve %d nodes. There are %d matching nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPAssingNodes, ram)
+			if nodes[i].NodeObj.RAM >= ram {
+				numOfRAMPassingNodes += 1
 			}
 		}
-	default: // Constraint is either absent or 0 GB which is meaningless
-		fmt.Println("You have not provided RAM constraint for VMs in a cluster , thus RAM limitations will be neglected")
+		if numOfRAMPassingNodes < requestedNumNodes {
+			log.Fatalf("You are trying to reserve %d nodes. There are %d matching nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPassingNodes, ram)
+			return nil
+		}
 	}
 
 	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
@@ -133,7 +130,6 @@ func main() {
 			&cli.IntFlag{
 				Name:    "ram",
 				Aliases: []string{"m"},
-				Value:   16,
 				Usage: "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
 			},
 		},

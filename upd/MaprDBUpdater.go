@@ -2,16 +2,34 @@ package main
 
 import (
 	"fmt"
+	"gopkg.in/urfave/cli.v2"
+	"log"
+	"os"
 	"sync"
+	"vmrenter/pkg/config"
 	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
 	"vmrenter/pkg/utils"
 )
 
 var nodesTable = "/user/mapr/nodes"
-var csvFilePath = "/home/user6bb0/Work/vm-renter/nodes.csv"
 
-func main() {
+func update(c *cli.Context) error {
+
+	if !c.IsSet("urldbconn") {
+		fmt.Println("Connection string isn't set, aborting")
+		return nil
+	}
+
+	if !c.IsSet("nodesfile"){
+		fmt.Println("File path string isn't set, aborting")
+		return nil
+	}
+	config.SetURLDBConn(c.String("urldbconn"))
+	dbConn := config.GetURLDBConn()
+	var csvFilePath = c.String("nodesfile")
+
+	fmt.Printf("**** Config **** %v\n", dbConn)
 
 	// Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
@@ -19,7 +37,7 @@ func main() {
 	err := mapr.Reset(nodesTable)
 	if err != nil {
 		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
-		return
+		return err
 	}
 	fmt.Println("Finished getting nodes id, ExpiresAT, ClusterID!")
 
@@ -81,13 +99,14 @@ func main() {
 	resetErr := mapr.Reset(nodesTable)
 	if resetErr != nil {
 		fmt.Printf("Error occurred while resetting /user/mapr/nodes table: %v", err)
-		return
+		return resetErr
 	}
 	fmt.Println("Finished resetting nodes table!")
 
 	// Updating the nodes table
 	fmt.Println("Starting writing to nodes table...")
 
+	// Synchronous way to update table until the error with goroutines is fixed
 	for _, mapIntface := range listOfMaps {
 		writeErr := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
 		if writeErr != nil {
@@ -95,7 +114,7 @@ func main() {
 		}
 	}
 
-	// Asynchronous writing to the table - fails because of syncPut() Investigate further
+	// Asynchronous writing to the table - fails because of syncPut(). Uncomment when the bug is fixed.
 	//var wg2 = sync.WaitGroup{}
 	//for _, mapIntface := range listOfMaps {
 	//	wg2.Add(1)
@@ -110,4 +129,34 @@ func main() {
 	//wg2.Wait()
 	fmt.Println("Finished writing to nodes table!")
 
+	return nil
+
+}
+
+func main() {
+
+	app := &cli.App{
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "urldbconn",
+				Aliases: []string{"u"},
+				Value:   "DBHOST:DBPORT?auth=basic;user=USERNAME;password=PASSWORD;ssl=false",
+				Usage:   "DB Connection URL",
+				EnvVars: []string{"URL_DB_CONN"},
+			},
+			&cli.StringFlag{
+				Name:    "nodesfile",
+				Aliases: []string{"f"},
+				Usage:   "Location of 'nodes' file",
+			},
+		},
+		Name:   "vmrenter",
+		Usage:  "Parameters Usage",
+		Action: update,
+	}
+
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatalf("\t*** FATAL ERROR *** \n\tError occured while running the app: %v", err)
+	}
 }

@@ -98,8 +98,3 @@ func TestDeleteAndCreateTable(t *testing.T) {
 	fmt.Println(string(body))
 
 }
-
-// TODO: end this function
-//func CheckNodesForRAM(nodeDbJsons []models.NodeDBJson) error {
-//
-//}
