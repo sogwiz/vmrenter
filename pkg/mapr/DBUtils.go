@@ -30,7 +30,7 @@ func IsRequestDoable(numNodes int, osName string, osVersion string) bool {
 
 	fmt.Println("Request: ", numNodes, osName)
 
-	nodeDBJsons := GetAvailableNodes("", "centos")
+	nodeDBJsons := GetAvailableNodes("", "centos", "7.3")
 
 	fmt.Println("Available nodes ", len(nodeDBJsons))
 	if len(nodeDBJsons) < numNodes {
@@ -42,7 +42,7 @@ func IsRequestDoable(numNodes int, osName string, osVersion string) bool {
 	return true
 }
 
-func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDBJson {
+func GetAvailableNodes(clusterID string, operatingSystem string, osVersion string) []models.NodeDBJson {
 	connection, err := GetConnection()
 	if err != nil {
 		fmt.Println("error getting connection", err)
@@ -62,7 +62,8 @@ func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 
 	// query for nodes where the ExpiresAt field has already passed
 	//now.Add(3*24*time.Hour)
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}}] }}`, operatingSystem, time.Now().Format(time.RFC3339))
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}},{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}}] }}`,
+		operatingSystem, time.Now().Format(time.RFC3339), osVersion)
 	fmt.Println(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)

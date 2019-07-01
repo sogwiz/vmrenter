@@ -44,6 +44,7 @@ func start(c *cli.Context) error {
 	emailAddr := c.String("email")
 	ram := c.Int("ram")
 	hoursToReserve := c.Int("hourstoreserve")
+	osVersion := c.String("nodeosversion")
 
 	if !c.IsSet("hourstoreserve") {
 		fmt.Println("Time for renting is not specified. The nodes will be reserved for 24 hours from now")
@@ -61,11 +62,12 @@ func start(c *cli.Context) error {
 	}
 
 	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID,
-		"\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn, "\nTime for rent (in hours):", hoursToReserve)
+		"\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn, "\nTime for rent (in hours):", hoursToReserve,
+		"\nRequested operating system:", requestedOperatingSystem,"\nOs version:", osVersion)
 
 	//configData := mapr.GetConfigObject(filePath)
 
-	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem)
+	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem, osVersion)
 	if len(nodes) < requestedNumNodes {
 		errorStr := "Can't full request. Only " + strconv.Itoa(len(nodes)) + " nodes available matching your request requirements"
 		log.Fatal(errorStr)
@@ -120,7 +122,7 @@ func main() {
 				Name:    "cluster",
 				Aliases: []string{"c"},
 				Value:   "sharedcluster",
-				Usage: "The cluster id",
+				Usage:   "The cluster id",
 			},
 			&cli.StringFlag{
 				Name:    "os",
@@ -150,13 +152,18 @@ func main() {
 			&cli.IntFlag{
 				Name:    "ram",
 				Aliases: []string{"m"},
-				Usage: "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
+				Usage:   "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
 			},
 			&cli.IntFlag{
 				Name:    "hourstoreserve",
 				Aliases: []string{"hours"},
 				Value:   24,
 				Usage:   "Number of hours for reservation",
+			},
+			&cli.StringFlag{
+				Name:    "osversion",
+				Aliases: []string{"nodeosversion"},
+				Usage:   "Specific version of OS of the node",
 			},
 		},
 		Name:   "vmrenter",
