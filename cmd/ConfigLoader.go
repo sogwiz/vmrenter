@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"os"
 	"strconv"
@@ -14,6 +15,12 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
+var logger zap.Logger
+
+func init(){
+
+
+}
 var configData models.FileContent
 
 const maximumRentingTime = 168 // in hours
