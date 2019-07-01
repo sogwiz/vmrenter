@@ -9,13 +9,13 @@ import (
 )
 
 func TestGetNodesFromCSV(t *testing.T) {
-	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
+	csvFilename := "/home/vlad/Work/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 	assert.True(t, len(nodes) > 0, "couldn't load nodes from csv to memory data model")
 }
 
 func TestGetNodeJsonDocString(t *testing.T) {
-	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
+	csvFilename := "/home/vlad/Work/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 
 	nodeStrings := make([]string, 0)
@@ -43,7 +43,7 @@ func writeNodeToDb(goroutineId int, jobs <-chan models.Node, results chan<- map[
 }
 
 func TestDataSeed(t *testing.T) {
-	csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
+	csvFilename := "/home/vlad/Work/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 
 	listOfMaps := make([]map[string]interface{}, 0)
