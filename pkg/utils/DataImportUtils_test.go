@@ -2,22 +2,21 @@ package utils
 
 import (
 	"fmt"
-	"sync"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"vmrenter/pkg/mapr"
-
-	"github.com/stretchr/testify/assert"
+	"vmrenter/pkg/models"
 )
 
 func TestGetNodesFromCSV(t *testing.T) {
 	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
-	nodes := getNodesFromCSV(csvFilename)
+	nodes := GetNodesFromCSV(csvFilename)
 	assert.True(t, len(nodes) > 0, "couldn't load nodes from csv to memory data model")
 }
 
 func TestGetNodeJsonDocString(t *testing.T) {
 	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
-	nodes := getNodesFromCSV(csvFilename)
+	nodes := GetNodesFromCSV(csvFilename)
 
 	nodeStrings := make([]string, 0)
 
@@ -30,29 +29,82 @@ func TestGetNodeJsonDocString(t *testing.T) {
 	assert.True(t, len(nodeStrings) > 0, "couldn't load nodes to json strings")
 }
 
+func writeNodeToDb(goroutineId int, jobs <-chan models.Node, results chan<- map[string]interface{}) {
+	for node := range jobs {
+		fmt.Printf("Worker %d starts job %v", goroutineId, node)
+		mapIntface := GetNodeJsonDocMap(node)
+		mapIntface["_id"] = node.ID
+		err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+		if err != nil {
+			fmt.Println("Error writing to table", err)
+		}
+		results <- mapIntface
+	}
+}
+
 func TestDataSeed(t *testing.T) {
-	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
-	nodes := getNodesFromCSV(csvFilename)
+	csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
+	nodes := GetNodesFromCSV(csvFilename)
 
 	listOfMaps := make([]map[string]interface{}, 0)
 
-	var wg sync.WaitGroup
-	for _, node := range nodes {
-		//nodeJsonStr := getNodeJsonDocString(node)
-		mapIntface := getNodeJsonDocMap(node)
-		mapIntface["_id"] = node.ID
-		listOfMaps = append(listOfMaps, mapIntface)
+	// *** Usual for loop ***
+	//for _, node := range nodes {
+	//	mapIntface := GetNodeJsonDocMap(node)
+	//	mapIntface["_id"] = node.ID
+	//	err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+	//	if err != nil {
+	//		fmt.Println("Error writing to table", err)
+	//	}
+	//	listOfMaps = append(listOfMaps, mapIntface)
+	//}
 
-		wg.Add(1)
-		go func(mapIntface map[string]interface{}) {
-			defer wg.Done()
-			error := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
-			if error != nil {
-				fmt.Println("Error writing to table", error)
-			}
-		}(mapIntface)
+	// *** Fully async way with goroutine for every node ***
+	//var wg sync.WaitGroup
+	//wg.Add(len(nodes))
+	//
+	//queue := make(chan map[string]interface{}, 1)
+	//
+	//for _, node := range nodes {
+	//	go func(node models.Node) {
+	//		mapIntface := GetNodeJsonDocMap(node)
+	//		mapIntface["_id"] = node.ID
+	//		err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+	//		if err != nil {
+	//			fmt.Println("Error writing to table", err)
+	//		}
+	//		queue <- mapIntface
+	//	}(node)
+	//}
+	//
+	//go func() {
+	//	for n := range queue {
+	//		listOfMaps = append(listOfMaps, n)
+	//		wg.Done()
+	//	}
+	//}()
+	//wg.Wait()
+
+	// Thread pool analog
+	var jobs = make(chan models.Node, len(nodes))
+	var results = make(chan map[string]interface{}, len(nodes))
+
+	var goroutineCount = 5
+
+	for i := 1; i <= goroutineCount; i++ {
+		go writeNodeToDb(i, jobs, results)
 	}
-	wg.Wait()
+
+	for _, node := range nodes {
+		jobs <- node
+	}
+	close(jobs)
+
+	for i := 0; i < len(nodes); i++ {
+		res := <-results
+		listOfMaps = append(listOfMaps, res)
+		fmt.Println("Finished with result", res["_id"])
+	}
 
 	assert.True(t, len(listOfMaps) > 0, "couldn't load nodes to map")
 

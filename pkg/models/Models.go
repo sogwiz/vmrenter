@@ -11,6 +11,7 @@ type Node struct {
 	EsxiServerID         string
 	Esxi                 Esxi     `json:"esxi"`
 	ExpectedServiceNames []string `json:"expectedServiceNames"`
+	RAM                  int      `json:"RAM"`
 }
 
 type NodeDBJson struct {
@@ -59,4 +60,10 @@ type Reservation struct {
 	Nodes           []NodeDBJson
 	ClusterID       string
 	ReservationType string
+}
+
+type PartialReservationForNodesUpdate struct {
+	ID        string `json:"_id"`
+	ExpiresAt string
+	ClusterID string
 }
