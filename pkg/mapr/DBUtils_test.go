@@ -37,7 +37,7 @@ func TestMakeReservation(t *testing.T) {
 	}
 
 	fmt.Println(reservation)
-	GenerateConfigJson(reservation, false, "/Users/sargonbenjamin/dev/src/private-installer/testing/configuration/config.json")
+	GenerateConfigJson(reservation, false, "/home/vlad/Work/sample-config.json")
 }
 
 func TestReset(t *testing.T) {
