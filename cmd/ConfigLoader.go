@@ -16,6 +16,8 @@ import (
 
 var configData models.FileContent
 
+const maximumRentingTime = 168 // in hours
+
 func getNodesInCluster(clusterID string) []models.Node {
 	res := make([]models.Node, 0)
 	for _, cluster := range configData.Clusters {
@@ -32,6 +34,7 @@ func getAvailableSharedNodes(operatingSystem string) (n []models.Node) {
 }
 
 func start(c *cli.Context) error {
+
 	filePath := c.String("file")
 	clusterID := c.String("cluster")
 	config.SetURLDBConn(c.String("urldbconn"))
@@ -40,8 +43,25 @@ func start(c *cli.Context) error {
 	requestedOperatingSystem := c.String("os")
 	emailAddr := c.String("email")
 	ram := c.Int("ram")
+	hoursToReserve := c.Int("hourstoreserve")
 
-	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID, "\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn)
+	if !c.IsSet("hourstoreserve") {
+		fmt.Println("Time for renting is not specified. The nodes will be reserved for 24 hours from now")
+		hoursToReserve = 24
+	} else {
+		switch {
+		case hoursToReserve <= 0:
+			fmt.Printf("You have specified invalid numer of hours - %v. Aborting reservation.\n", hoursToReserve)
+			return nil
+		case hoursToReserve > 24*7:
+			fmt.Printf("Your time for renting is %v hours - exceeds maximum amount of hours - %v (1 week). "+
+				"Aborting reservation.\n", hoursToReserve, maximumRentingTime)
+			return nil
+		}
+	}
+
+	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID,
+		"\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn, "\nTime for rent (in hours):", hoursToReserve)
 
 	//configData := mapr.GetConfigObject(filePath)
 
@@ -75,7 +95,8 @@ func start(c *cli.Context) error {
 		}
 	}
 
-	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
+	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes],
+		"http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly", hoursToReserve)
 	if err != nil {
 		fmt.Println("error calling MakeReservation", err)
 	}
@@ -130,6 +151,12 @@ func main() {
 				Name:    "ram",
 				Aliases: []string{"m"},
 				Usage: "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
+			},
+			&cli.IntFlag{
+				Name:    "hourstoreserve",
+				Aliases: []string{"hours"},
+				Value:   24,
+				Usage:   "Number of hours for reservation",
 			},
 		},
 		Name:   "vmrenter",
