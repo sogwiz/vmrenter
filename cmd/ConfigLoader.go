@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"go.uber.org/zap"
 	"log"
 	"os"
 	"strconv"
+	zaplogger "vmrenter/logger"
 
 	"vmrenter/pkg/config"
 
@@ -15,12 +15,10 @@ import (
 	"gopkg.in/urfave/cli.v2"
 )
 
-var logger zap.Logger
-
-func init(){
-
+func init() {
 
 }
+
 var configData models.FileContent
 
 const maximumRentingTime = 168 // in hours
@@ -41,6 +39,15 @@ func getAvailableSharedNodes(operatingSystem string) (n []models.Node) {
 }
 
 func start(c *cli.Context) error {
+
+	logLevel := c.String("loglevel")
+	lgr, err := zaplogger.BuildLogger(logLevel)
+	if err != nil {
+		panic(err)
+	}
+
+	lgr.Info("Good!")
+
 
 	filePath := c.String("file")
 	clusterID := c.String("cluster")
@@ -70,7 +77,7 @@ func start(c *cli.Context) error {
 
 	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID,
 		"\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn, "\nTime for rent (in hours):", hoursToReserve,
-		"\nRequested operating system:", requestedOperatingSystem,"\nOs version:", osVersion)
+		"\nRequested operating system:", requestedOperatingSystem, "\nOs version:", osVersion)
 
 	//configData := mapr.GetConfigObject(filePath)
 
@@ -171,6 +178,11 @@ func main() {
 				Name:    "osversion",
 				Aliases: []string{"nodeosversion"},
 				Usage:   "Specific version of OS of the node",
+			},
+			&cli.StringFlag{
+				Name:    "loglevel",
+				Aliases: []string{"l"},
+				Usage:   "Log level",
 			},
 		},
 		Name:   "vmrenter",

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	zaplogger "vmrenter/logger"
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
@@ -21,10 +22,19 @@ func update(c *cli.Context) error {
 		return nil
 	}
 
-	if !c.IsSet("nodesfile"){
+	if !c.IsSet("nodesfile") {
 		fmt.Println("File path string isn't set, aborting")
 		return nil
 	}
+
+	logLevel := c.String("loglevel")
+	lgr, err := zaplogger.BuildLogger(logLevel)
+	if err != nil {
+		panic(err)
+	}
+
+	lgr.Info("Good!")
+
 	config.SetURLDBConn(c.String("urldbconn"))
 	dbConn := config.GetURLDBConn()
 	var csvFilePath = c.String("nodesfile")
@@ -34,7 +44,7 @@ func update(c *cli.Context) error {
 	// Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
 	partialNodes := mapr.GetPartialReservationsForNodesUpdate()
-	err := mapr.Reset(nodesTable)
+	err = mapr.Reset(nodesTable)
 	if err != nil {
 		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
 		return err
@@ -148,6 +158,11 @@ func main() {
 				Name:    "nodesfile",
 				Aliases: []string{"f"},
 				Usage:   "Location of 'nodes' file",
+			},
+			&cli.StringFlag{
+				Name:    "loglevel",
+				Aliases: []string{"l"},
+				Usage:   "Log level",
 			},
 		},
 		Name:   "vmrenter",
