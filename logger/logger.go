@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"strings"
 )
 
 var cfg zap.Config
@@ -47,5 +48,15 @@ func BuildLogger(logLevel string) (*zap.Logger, error) {
 		}
 	}
 
-	return nil, errors.New("invalid log level")
+	var possibleLogLevels []string
+
+	for k := range logLevels {
+		possibleLogLevels = append(possibleLogLevels, k)
+	}
+
+	possibleLogLevelsStr := strings.Join(possibleLogLevels, ", ")
+
+	errorMsg := fmt.Sprintf("invalid log level - %v, possible log levels - %v", logLevel, possibleLogLevelsStr)
+
+	return nil, errors.New(errorMsg)
 }
