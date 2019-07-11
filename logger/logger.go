@@ -21,7 +21,7 @@ var logLevels = map[string]zapcore.Level{
 	"Fatal":  zapcore.FatalLevel,
 }
 
-func BuildLogger(logLevel string) (*zap.Logger, error) {
+func ConfigureLogger(logLevel string) error {
 
 	for lvl, zapLevel := range logLevels {
 		if logLevel == lvl {
@@ -42,9 +42,14 @@ func BuildLogger(logLevel string) (*zap.Logger, error) {
 				},
 			}
 
-			fmt.Printf("Log level %v", logLevel)
+			fmt.Printf("Log level %v\n", logLevel)
 			logger, err := cfg.Build()
-			return logger, err
+			zap.ReplaceGlobals(logger)
+			if err != nil {
+				return err
+			}
+			zap.S().Info("Successfully configured logger")
+			return nil
 		}
 	}
 
@@ -58,5 +63,5 @@ func BuildLogger(logLevel string) (*zap.Logger, error) {
 
 	errorMsg := fmt.Sprintf("invalid log level - %v, possible log levels - %v", logLevel, possibleLogLevelsStr)
 
-	return nil, errors.New(errorMsg)
+	return errors.New(errorMsg)
 }

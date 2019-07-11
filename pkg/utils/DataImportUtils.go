@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
-	"log"
+	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"strconv"
@@ -57,7 +57,7 @@ func getNodeOperatingSystems(ips []string) []models.Node {
 		cmd.Stdout = &out
 		err := cmd.Run()
 		if err != nil {
-			log.Fatal(err)
+			zap.S().Fatal(err)
 		}
 
 		outstr := out.String()
@@ -101,7 +101,7 @@ func GetNodesFromCSV(csvFilename string) []models.Node {
 	reader := csv.NewReader(bufio.NewReader(csvFile))
 	lines, err := reader.ReadAll()
 	if err != nil {
-		log.Fatalf("error reading all lines: %v", err)
+		zap.S().Fatalf("error reading all lines: %v", err)
 	}
 
 	nodes := make([]models.Node, 0)
@@ -158,7 +158,7 @@ func getNodeJsonDocString(node models.Node) string {
 
 	nodeJson, err := json.Marshal(nodeDbJson)
 	if err != nil {
-		log.Fatalf("couldn't marshal obj to json: %v", err)
+		zap.S().Fatalf("couldn't marshal obj to json: %v", err)
 	}
 
 	return string(nodeJson)

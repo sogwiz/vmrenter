@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"go.uber.org/zap"
 	"gopkg.in/urfave/cli.v2"
 	"log"
 	"os"
@@ -17,44 +17,42 @@ var nodesTable = "/user/mapr/nodes"
 
 func update(c *cli.Context) error {
 
-	if !c.IsSet("urldbconn") {
-		fmt.Println("Connection string isn't set, aborting")
-		return nil
-	}
-
-	if !c.IsSet("nodesfile") {
-		fmt.Println("File path string isn't set, aborting")
-		return nil
-	}
-
 	logLevel := c.String("loglevel")
-	lgr, err := zaplogger.BuildLogger(logLevel)
+	err := zaplogger.ConfigureLogger(logLevel)
 	if err != nil {
 		panic(err)
 	}
 
-	lgr.Info("Good!")
+	if !c.IsSet("urldbconn") {
+		zap.S().Error("Connection string isn't set, aborting")
+		return nil
+	}
+
+	if !c.IsSet("nodesfile") {
+		zap.S().Error("File path string isn't set, aborting")
+		return nil
+	}
 
 	config.SetURLDBConn(c.String("urldbconn"))
 	dbConn := config.GetURLDBConn()
 	var csvFilePath = c.String("nodesfile")
 
-	fmt.Printf("**** Config **** %v\n", dbConn)
+	zap.S().Infof("**** Config **** %v\n", dbConn)
 
 	// Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
-	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
+	zap.S().Info("Starting getting nodes id, ExpiresAT, ClusterID...")
 	partialNodes := mapr.GetPartialReservationsForNodesUpdate()
 	err = mapr.Reset(nodesTable)
 	if err != nil {
-		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
+		zap.S().Errorf("Error occured while resetting /user/mapr/nodes table: %v", err)
 		return err
 	}
-	fmt.Println("Finished getting nodes id, ExpiresAT, ClusterID!")
+	zap.S().Info("Finished getting nodes id, ExpiresAT, ClusterID!")
 
 	// Getting nodes from csv file
-	fmt.Println("Starting getting nodes from the csv file...")
+	zap.S().Info("Starting getting nodes from the csv file...")
 	nodes := utils.GetNodesFromCSV(csvFilePath)
-	fmt.Println("Finished getting nodes from the csv file!")
+	zap.S().Info("Finished getting nodes from the csv file!")
 
 	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
 
@@ -63,7 +61,7 @@ func update(c *cli.Context) error {
 	nodeDbJsonQueue := make(chan map[string]interface{}, 1)
 	wg.Add(len(nodes))
 
-	fmt.Println("Starting creating NodeDBJsons from nodes...")
+	zap.S().Info("Starting creating NodeDBJsons from nodes...")
 	for _, node := range nodes {
 		go func(node models.Node) {
 			mapIntface := utils.GetNodeJsonDocMap(node)
@@ -80,7 +78,7 @@ func update(c *cli.Context) error {
 	}()
 
 	wg.Wait()
-	fmt.Println("Finished creating NodeDBJsons from nodes!")
+	zap.S().Info("Finished creating NodeDBJsons from nodes!")
 
 	// Updating NodeDBJsons with ClusterID, ExpiresAT
 	wg1 := sync.WaitGroup{}
@@ -105,22 +103,22 @@ func update(c *cli.Context) error {
 	wg1.Wait()
 
 	// Resetting /user/mapr/node table
-	fmt.Println("Starting resetting nodes table...")
+	zap.S().Info("Starting resetting nodes table...")
 	resetErr := mapr.Reset(nodesTable)
 	if resetErr != nil {
-		fmt.Printf("Error occurred while resetting /user/mapr/nodes table: %v", err)
+		zap.S().Errorf("Error occurred while resetting /user/mapr/nodes table: %v", err)
 		return resetErr
 	}
-	fmt.Println("Finished resetting nodes table!")
+	zap.S().Info("Finished resetting nodes table!")
 
 	// Updating the nodes table
-	fmt.Println("Starting writing to nodes table...")
+	zap.S().Info("Starting writing to nodes table...")
 
 	// Synchronous way to update table until the error with goroutines is fixed
 	for _, mapIntface := range listOfMaps {
 		writeErr := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
 		if writeErr != nil {
-			fmt.Println("Error writing to table", writeErr)
+			zap.S().Error("Error writing to table", writeErr)
 		}
 	}
 
@@ -137,7 +135,7 @@ func update(c *cli.Context) error {
 	//	}(mapIntface)
 	//}
 	//wg2.Wait()
-	fmt.Println("Finished writing to nodes table!")
+	zap.S().Info("Finished writing to nodes table!")
 
 	return nil
 
