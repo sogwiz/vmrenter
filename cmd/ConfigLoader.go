@@ -99,7 +99,7 @@ func main() {
 				Name:    "cluster",
 				Aliases: []string{"c"},
 				Value:   "sharedcluster",
-				Usage: "The cluster id",
+				Usage:   "The cluster id",
 			},
 			&cli.StringFlag{
 				Name:    "os",
@@ -129,7 +129,7 @@ func main() {
 			&cli.IntFlag{
 				Name:    "ram",
 				Aliases: []string{"m"},
-				Usage: "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
+				Usage:   "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
 			},
 		},
 		Name:   "vmrenter",
