@@ -22,14 +22,14 @@ COPY ./ ./
 # Check if u
 ARG update="FALSE"
 RUN if [ $update = "TRUE" ] ;    \
-    then echo 'Building upd' ;   \
+    then echo 'Building MaprDBUpdater' ;   \
          CGO_ENABLED=0 go build  \
          -installsuffix 'static' \
-         -o /app ./upd ;         \
-    else echo 'Building cmd' ;   \
+         -o /app ./cmd/MaprDBUpdater ; \
+    else echo 'Building ConfigLoader' ;   \
          CGO_ENABLED=0 go build  \
          -installsuffix 'static' \
-         -o /app ./cmd ;         \
+         -o /app ./cmd/ConfigLoader ; \
     fi
 
 # Final stage: the running container.
