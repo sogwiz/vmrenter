@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"sync"
 	"vmrenter/pkg/models"
 
 	"github.com/fatih/structs"
@@ -176,27 +175,14 @@ func nodeCSVToJSonFile() {
 
 func CreateNodeDBJsons(nodes []models.Node) []map[string]interface{} {
 	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
-	var wg sync.WaitGroup
-	nodeDbJsonQueue := make(chan map[string]interface{}, 1)
-	wg.Add(len(nodes))
-
 	fmt.Println("Starting creating NodeDBJsons from nodes...")
+
 	for _, node := range nodes {
-		go func(node models.Node) {
-			mapIntface := GetNodeJsonDocMap(node)
-			mapIntface["_id"] = node.ID
-			nodeDbJsonQueue <- mapIntface
-		}(node)
+		mapIntface := GetNodeJsonDocMap(node)
+		mapIntface["_id"] = node.ID
+		listOfMaps = append(listOfMaps, mapIntface)
 	}
 
-	go func() {
-		for n := range nodeDbJsonQueue {
-			listOfMaps = append(listOfMaps, n)
-			wg.Done()
-		}
-	}()
-
-	wg.Wait()
 	fmt.Println("Finished creating NodeDBJsons from nodes!")
 	return listOfMaps
 }
