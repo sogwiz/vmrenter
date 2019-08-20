@@ -9,13 +9,14 @@ import (
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/models"
 
+
 	client "github.com/mapr/maprdb-go-client"
 )
 
 const tableNodes = "/user/mapr/nodes"
 const tableReservations = "/user/mapr/reservations"
 
-func getConnection() (*client.Connection, error) {
+func GetConnection() (*client.Connection, error) {
 
 	connection, err := client.MakeConnection(config.GetURLDBConn())
 
@@ -43,7 +44,7 @@ func IsRequestDoable(numNodes int, osName string, osVersion string) bool {
 }
 
 func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDBJson {
-	connection, err := getConnection()
+	connection, err := GetConnection()
 	if err != nil {
 		fmt.Println("error getting connection", err)
 	}
@@ -88,7 +89,7 @@ func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 }
 
 func getAllNodes() []models.NodeDBJson {
-	connection, err := getConnection()
+	connection, err := GetConnection()
 	if err != nil {
 		fmt.Println("error getting connection", err)
 	}
@@ -127,7 +128,7 @@ func getAllNodes() []models.NodeDBJson {
 }
 
 func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node {
-	connection, err := getConnection()
+	connection, err := GetConnection()
 	if err != nil {
 		fmt.Println("error getting connection", err)
 	}
@@ -143,7 +144,7 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 		panic(err)
 	}
 
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3*24*time.Hour).Format(time.RFC3339))
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3 * 24 * time.Hour).Format(time.RFC3339))
 	fmt.Println(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
@@ -374,7 +375,7 @@ func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJs
 	return reservation, error
 }
 
-func reset(tableName string) error {
+func Reset(tableName string) error {
 	connectionString := config.GetURLDBConn()
 
 	//options := &client.ConnectionOptions{MaxAttempt:3, WaitBetweenSeconds:10, CallTimeoutSeconds:60}
@@ -403,4 +404,87 @@ func reset(tableName string) error {
 	}
 
 	return error
+}
+
+func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesUpdate {
+	connection, err := GetConnection()
+	if err != nil {
+		fmt.Println("error getting connection", err)
+	}
+
+	// this will get called when function exits after this point, irregardless of returning a value or error
+	defer connection.Close()
+
+	// Options for find request
+	// THIS IS CRITICAL - must be FALSE
+	options := &client.FindOptions{ResultAsDocument: false}
+
+	store, err := connection.GetStore(tableNodes)
+	if err != nil {
+		panic(err)
+	}
+
+	// query for nodes where the ExpiresAt field has not passed yet
+	query := fmt.Sprintf(`{"$select":["_id","ExpiresAT","ClusterID"],"$where":{"$gt":{"ExpiresAT":"%v"}}}`, time.Now().Format(time.RFC3339))
+
+	findResult, err := store.FindQueryString(query, options)
+	if err != nil {
+		panic(err)
+	}
+
+	partialReservationsForNodesUpdate := make([]models.PartialReservationForNodesUpdate, 0)
+
+	// Print OJAI Documents from document stream
+	for _, doc := range findResult.DocumentList() {
+		tmpPartialReservation := models.PartialReservationForNodesUpdate{}
+		tmp, _ := json.Marshal(doc)
+		err = json.Unmarshal(tmp, &tmpPartialReservation)
+		partialReservationsForNodesUpdate = append(partialReservationsForNodesUpdate, tmpPartialReservation)
+	}
+
+	return partialReservationsForNodesUpdate
+}
+
+
+// Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
+func ExtractPartialNodesData() ([]models.PartialReservationForNodesUpdate, error) {
+	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
+	partialNodes := GetPartialReservationsForNodesUpdate()
+	err := Reset("/user/mapr/nodes")
+	if err != nil {
+		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
+		return nil, err
+	}
+	fmt.Println("Finished getting nodes id, ExpiresAT, ClusterID!")
+	return partialNodes, err
+}
+
+func UpdateNodesTable(listOfMaps []map[string]interface{}) interface{} {
+	// Updating the nodes table
+	fmt.Println("Starting writing to nodes table...")
+
+	// Synchronous way to update table until the error with goroutines is fixed
+	for _, mapIntface := range listOfMaps {
+		writeErr := WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+		if writeErr != nil {
+			fmt.Println("Error writing to table", writeErr)
+		}
+	}
+
+	// Asynchronous writing to the table - fails because of syncPut(). Uncomment when the bug is fixed.
+	//var wg2 = sync.WaitGroup{}
+	//for _, mapIntface := range listOfMaps {
+	//	wg2.Add(1)
+	//	go func(mapIntface map[string]interface{}) {
+	//		defer wg2.Done()
+	//		writeErr := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+	//		if writeErr != nil {
+	//			fmt.Println("Error writing to table", writeErr)
+	//		}
+	//	}(mapIntface)
+	//}
+	//wg2.Wait()
+	fmt.Println("Finished writing to nodes table!")
+
+	return nil
 }

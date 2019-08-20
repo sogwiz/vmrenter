@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 
@@ -38,6 +39,7 @@ func start(c *cli.Context) error {
 	requestedNumNodes := c.Int("nodes")
 	requestedOperatingSystem := c.String("os")
 	emailAddr := c.String("email")
+	ram := c.Int("ram")
 
 	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID, "\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn)
 
@@ -46,11 +48,31 @@ func start(c *cli.Context) error {
 	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem)
 	if len(nodes) < requestedNumNodes {
 		errorStr := "Can't full request. Only " + strconv.Itoa(len(nodes)) + " nodes available matching your request requirements"
-		panic(errorStr)
+		log.Fatal(errorStr)
 	}
 
 	if len(nodes) == 0 {
-		panic("Must submit a non-zero number of nodes. eg -n 1")
+		log.Fatal("Must submit a non-zero number of nodes. eg -n 1")
+	}
+
+	// Check if a constraint for RAM is posed at all
+	switch {
+	case !c.IsSet("ram"): // Check if the flag is set at all
+		fmt.Println("You have not provided RAM constraint for VMs in a cluster , thus RAM limitations will be neglected")
+	case ram <= 0:
+		log.Fatalf("You have provided invalid value for RAM constraint - %v. Aborting reserving.", ram)
+	case ram > 0: // Constraint is present
+		// Check if there are enough nodes with RAM equal or more than needed
+		numOfRAMPassingNodes := 0 // Number of nodes that adhere to RAM constraints
+		for i := range nodes {
+			if nodes[i].NodeObj.RAM >= ram {
+				numOfRAMPassingNodes += 1
+			}
+		}
+		if numOfRAMPassingNodes < requestedNumNodes {
+			log.Fatalf("You are trying to reserve %d nodes. There are %d matching nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPassingNodes, ram)
+			return nil
+		}
 	}
 
 	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
@@ -104,13 +126,21 @@ func main() {
 				Value:   0,
 				Usage:   "number of nodes requested to reserve",
 			},
+			&cli.IntFlag{
+				Name:    "ram",
+				Aliases: []string{"m"},
+				Usage:   "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
+			},
 		},
 		Name:   "vmrenter",
 		Usage:  "Parameters Usage",
 		Action: start,
 	}
 
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatalf("\t*** FATAL ERROR *** \n\tError occured while running the app: %v", err)
+	}
 
 	//for k, v := range m {
 	//	switch vv := v.(type) {

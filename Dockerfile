@@ -19,9 +19,18 @@ RUN go mod download
 COPY ./ ./
 
 # Build the executable to `/app`. Mark the build as statically linked.
-RUN CGO_ENABLED=0 go build \
-    -installsuffix 'static' \
-    -o /app ./cmd
+# Check if u
+ARG update="FALSE"
+RUN if [ $update = "TRUE" ] ;    \
+    then echo 'Building MaprDBUpdater' ;   \
+         CGO_ENABLED=0 go build  \
+         -installsuffix 'static' \
+         -o /app ./cmd/MaprDBUpdater ; \
+    else echo 'Building ConfigLoader' ;   \
+         CGO_ENABLED=0 go build  \
+         -installsuffix 'static' \
+         -o /app ./cmd/ConfigLoader ; \
+    fi
 
 # Final stage: the running container.
 FROM scratch AS final

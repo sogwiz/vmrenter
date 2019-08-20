@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -96,7 +97,7 @@ func getNodeOperatingSystems(ips []string) []models.Node {
 	return nodes
 }
 
-func getNodesFromCSV(csvFilename string) []models.Node {
+func GetNodesFromCSV(csvFilename string) []models.Node {
 	csvFile, _ := os.Open(csvFilename)
 	reader := csv.NewReader(bufio.NewReader(csvFile))
 	lines, err := reader.ReadAll()
@@ -114,6 +115,7 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 
 		esxiID, _ := strconv.Atoi(line[5])
 		snapshotID, _ := strconv.Atoi(line[6])
+		ram, _ := strconv.Atoi(line[13])
 		node := models.Node{
 			ID:           line[0],
 			Host:         line[1],
@@ -128,6 +130,7 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 				Name:    line[8],
 				Version: line[9],
 			},
+			RAM:      ram,
 			Username: os.Getenv("DEFAULT_USERNAME"),
 			Password: os.Getenv("DEFAULT_PASSWORD"),
 		}
@@ -138,7 +141,7 @@ func getNodesFromCSV(csvFilename string) []models.Node {
 	return nodes
 }
 
-func getNodeJsonDocMap(node models.Node) map[string]interface{} {
+func GetNodeJsonDocMap(node models.Node) map[string]interface{} {
 	nodeDbJson := models.NodeDBJson{
 		NodeObj: node,
 		ID:      node.ID,
@@ -168,4 +171,18 @@ func getNodeOS() {
 
 func nodeCSVToJSonFile() {
 
+}
+
+func CreateNodeDBJsons(nodes []models.Node) []map[string]interface{} {
+	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
+	fmt.Println("Starting creating NodeDBJsons from nodes...")
+
+	for _, node := range nodes {
+		mapIntface := GetNodeJsonDocMap(node)
+		mapIntface["_id"] = node.ID
+		listOfMaps = append(listOfMaps, mapIntface)
+	}
+
+	fmt.Println("Finished creating NodeDBJsons from nodes!")
+	return listOfMaps
 }

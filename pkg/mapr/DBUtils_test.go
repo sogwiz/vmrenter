@@ -41,8 +41,8 @@ func TestMakeReservation(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	reset(tableReservations)
-	reset(tableNodes)
+	Reset(tableReservations)
+	Reset(tableNodes)
 }
 
 func workerUnreserver(id int, jobs <-chan models.NodeDBJson, results chan<- int) {
