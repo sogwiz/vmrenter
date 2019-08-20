@@ -10,6 +10,7 @@ import (
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/models"
 
+
 	client "github.com/mapr/maprdb-go-client"
 )
 
@@ -445,4 +446,48 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 	}
 
 	return partialReservationsForNodesUpdate
+}
+
+
+// Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
+func ExtractPartialNodesData() ([]models.PartialReservationForNodesUpdate, error) {
+	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
+	partialNodes := GetPartialReservationsForNodesUpdate()
+	err := Reset("/user/mapr/nodes")
+	if err != nil {
+		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
+		return nil, err
+	}
+	fmt.Println("Finished getting nodes id, ExpiresAT, ClusterID!")
+	return partialNodes, err
+}
+
+func UpdateNodesTable(listOfMaps []map[string]interface{}) interface{} {
+	// Updating the nodes table
+	fmt.Println("Starting writing to nodes table...")
+
+	// Synchronous way to update table until the error with goroutines is fixed
+	for _, mapIntface := range listOfMaps {
+		writeErr := WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+		if writeErr != nil {
+			fmt.Println("Error writing to table", writeErr)
+		}
+	}
+
+	// Asynchronous writing to the table - fails because of syncPut(). Uncomment when the bug is fixed.
+	//var wg2 = sync.WaitGroup{}
+	//for _, mapIntface := range listOfMaps {
+	//	wg2.Add(1)
+	//	go func(mapIntface map[string]interface{}) {
+	//		defer wg2.Done()
+	//		writeErr := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
+	//		if writeErr != nil {
+	//			fmt.Println("Error writing to table", writeErr)
+	//		}
+	//	}(mapIntface)
+	//}
+	//wg2.Wait()
+	fmt.Println("Finished writing to nodes table!")
+
+	return nil
 }
