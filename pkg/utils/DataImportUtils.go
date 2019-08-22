@@ -174,7 +174,7 @@ func nodeCSVToJSonFile() {
 
 func CreateNodeDBJsons(nodes []models.Node) []map[string]interface{} {
 	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
-	fmt.Println("Starting creating NodeDBJsons from nodes...")
+	zap.S().Info("Starting creating NodeDBJsons from nodes...")
 
 	for _, node := range nodes {
 		mapIntface := GetNodeJsonDocMap(node)
@@ -182,6 +182,6 @@ func CreateNodeDBJsons(nodes []models.Node) []map[string]interface{} {
 		listOfMaps = append(listOfMaps, mapIntface)
 	}
 
-	fmt.Println("Finished creating NodeDBJsons from nodes!")
+	zap.S().Info("Finished creating NodeDBJsons from nodes!")
 	return listOfMaps
 }

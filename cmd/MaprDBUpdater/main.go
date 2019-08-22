@@ -1,11 +1,12 @@
 package main
 
 import (
-	"fmt"
+	"go.uber.org/zap"
 	"gopkg.in/urfave/cli.v2"
 	"log"
 	"os"
 	"sync"
+	zaplogger "vmrenter/logger"
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
@@ -39,46 +40,51 @@ func updateNodeDBJsons(partialNodes []models.PartialReservationForNodesUpdate, l
 	wg1.Wait()
 }
 
-
 func update(c *cli.Context) error {
 
+	logLevel := c.String("loglevel")
+	err := zaplogger.ConfigureLogger(logLevel)
+	if err != nil {
+		panic(err)
+	}
+
 	if !c.IsSet("urldbconn") {
-		fmt.Println("Connection string isn't set, aborting")
+		zap.S().Fatalf("Connection string isn't set, aborting")
 		return nil
 	}
 
 	if !c.IsSet("nodesfile") {
-		fmt.Println("File path string isn't set, aborting")
+		zap.S().Fatalf("File path string isn't set, aborting")
 		return nil
 	}
 	config.SetURLDBConn(c.String("urldbconn"))
 	dbConn := config.GetURLDBConn()
 	var csvFilePath = c.String("nodesfile")
 
-	fmt.Printf("**** Config **** %v\n", dbConn)
+	zap.S().Infof("**** Config **** %v\n", dbConn)
 
 	partialNodes, err := mapr.ExtractPartialNodesData()
 	if err != nil {
-		panic(err)
+		zap.S().Panic(err)
 	}
 
 	// Getting nodes from csv file
-	fmt.Println("Starting getting nodes from the csv file...")
+	zap.S().Infof("Starting getting nodes from the csv file...")
 	nodes := utils.GetNodesFromCSV(csvFilePath)
-	fmt.Println("Finished getting nodes from the csv file!")
+	zap.S().Infof("Finished getting nodes from the csv file!")
 
 	listOfMaps := utils.CreateNodeDBJsons(nodes)
 
 	updateNodeDBJsons(partialNodes, listOfMaps)
 
 	// Resetting /user/mapr/node table
-	fmt.Println("Starting resetting nodes table...")
+	zap.S().Infof("Starting resetting nodes table...")
 	resetErr := mapr.Reset(nodesTable)
 	if resetErr != nil {
-		fmt.Printf("Error occurred while resetting /user/mapr/nodes table: %v", err)
+		zap.S().Errorf("Error occurred while resetting /user/mapr/nodes table: %v", err)
 		return resetErr
 	}
-	fmt.Println("Finished resetting nodes table!")
+	zap.S().Info("Finished resetting nodes table!")
 
 	mapr.UpdateNodesTable(listOfMaps)
 	return nil
@@ -92,7 +98,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "urldbconn",
 				Aliases: []string{"u"},
-				Value:   "DBHOST:DBPORT?auth=basic;user=USERNAME;password=PASSWORD;ssl=false",
+				Value:   "",
 				Usage:   "DB Connection URL",
 				EnvVars: []string{"URL_DB_CONN"},
 			},
@@ -100,6 +106,11 @@ func main() {
 				Name:    "nodesfile",
 				Aliases: []string{"f"},
 				Usage:   "Location of 'nodes' file",
+			},
+			&cli.StringFlag{
+				Name:    "loglevel",
+				Aliases: []string{"l"},
+				Usage:   "Log level",
 			},
 		},
 		Name:   "vmrenter",

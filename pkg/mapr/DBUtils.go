@@ -63,7 +63,6 @@ func GetAvailableNodes(clusterID string, operatingSystem string, osVersion strin
 	}
 
 	// query for nodes where the ExpiresAt field has already passed
-	//now.Add(3*24*time.Hour)
 	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}},{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}}] }}`,
 		operatingSystem, time.Now().Format(time.RFC3339), osVersion)
 	zap.S().Info(queryStr)
@@ -79,12 +78,8 @@ func GetAvailableNodes(clusterID string, operatingSystem string, osVersion strin
 	for _, doc := range findResult.DocumentList() {
 		tmpNode := models.NodeDBJson{}
 		tmp, _ := json.Marshal(doc)
-		//fmt.Println(err)
-		//fmt.Println(string(tmp))
 		err = json.Unmarshal(tmp, &tmpNode)
 		nodeDBJsons = append(nodeDBJsons, tmpNode)
-		//fmt.Println(err)
-		//fmt.Println(tmpNode)
 	}
 
 	return nodeDBJsons
@@ -118,12 +113,8 @@ func getAllNodes() []models.NodeDBJson {
 	for _, doc := range findResult.DocumentList() {
 		tmpNode := models.NodeDBJson{}
 		tmp, _ := json.Marshal(doc)
-		//fmt.Println(err)
-		//fmt.Println(string(tmp))
 		err = json.Unmarshal(tmp, &tmpNode)
 		nodeDBJsons = append(nodeDBJsons, tmpNode)
-		//fmt.Println(err)
-		//fmt.Println(tmpNode)
 	}
 
 	return nodeDBJsons
@@ -164,7 +155,7 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 }
 
 func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error {
-	zap.S().Info("The time is", time.Now())
+	zap.S().Info("The time is ", time.Now())
 
 	connectionString := config.GetURLDBConn()
 
@@ -219,7 +210,7 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 }
 
 func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
-	fmt.Println(nodeID)
+	zap.S().Info(nodeID)
 	connectionString := config.GetURLDBConn()
 
 	storeName := tableNodes
@@ -451,26 +442,26 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 
 // Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 func ExtractPartialNodesData() ([]models.PartialReservationForNodesUpdate, error) {
-	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
+	zap.S().Info("Starting getting nodes id, ExpiresAT, ClusterID...")
 	partialNodes := GetPartialReservationsForNodesUpdate()
 	err := Reset("/user/mapr/nodes")
 	if err != nil {
-		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
+		zap.S().Errorf("Error occured while resetting /user/mapr/nodes table: %v", err)
 		return nil, err
 	}
-	fmt.Println("Finished getting nodes id, ExpiresAT, ClusterID!")
+	zap.S().Info("Finished getting nodes id, ExpiresAT, ClusterID!")
 	return partialNodes, err
 }
 
 func UpdateNodesTable(listOfMaps []map[string]interface{}) interface{} {
 	// Updating the nodes table
-	fmt.Println("Starting writing to nodes table...")
+	zap.S().Info("Starting writing to nodes table...")
 
 	// Synchronous way to update table until the error with goroutines is fixed
 	for _, mapIntface := range listOfMaps {
 		writeErr := WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
 		if writeErr != nil {
-			fmt.Println("Error writing to table", writeErr)
+			zap.S().Errorf("Error writing to table", writeErr)
 		}
 	}
 
@@ -487,7 +478,7 @@ func UpdateNodesTable(listOfMaps []map[string]interface{}) interface{} {
 	//	}(mapIntface)
 	//}
 	//wg2.Wait()
-	fmt.Println("Finished writing to nodes table!")
+	zap.S().Info("Finished writing to nodes table!")
 
 	return nil
 }

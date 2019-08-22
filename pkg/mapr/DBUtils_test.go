@@ -27,7 +27,7 @@ func TestMakeReservation(t *testing.T) {
 	numNodes := 1
 	nodes := GetAvailableNodes("sharedpool", "centos", "7.3")
 	if len(nodes) < numNodes {
-		panic("Can't fulllfill request. exiting")
+		panic("Can't fulfill request. exiting")
 	}
 
 	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly", 24)

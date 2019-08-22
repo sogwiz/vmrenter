@@ -1,10 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"os"
 	"strconv"
+	zaplogger "vmrenter/logger"
 
 	"vmrenter/pkg/config"
 
@@ -15,6 +16,8 @@ import (
 )
 
 var configData models.FileContent
+
+const maximumRentingTime = 168 // in hours
 
 func getNodesInCluster(clusterID string) []models.Node {
 	res := make([]models.Node, 0)
@@ -32,6 +35,13 @@ func getAvailableSharedNodes(operatingSystem string) (n []models.Node) {
 }
 
 func start(c *cli.Context) error {
+
+	logLevel := c.String("loglevel")
+	err := zaplogger.ConfigureLogger(logLevel)
+	if err != nil {
+		panic(err)
+	}
+
 	filePath := c.String("file")
 	clusterID := c.String("cluster")
 	config.SetURLDBConn(c.String("urldbconn"))
@@ -40,27 +50,43 @@ func start(c *cli.Context) error {
 	requestedOperatingSystem := c.String("os")
 	emailAddr := c.String("email")
 	ram := c.Int("ram")
+	hoursToReserve := c.Int("hourstoreserve")
+	osVersion := c.String("nodeosversion")
 
-	fmt.Println("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID, "\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn)
+	if !c.IsSet("hourstoreserve") {
+		hoursToReserve = 24
+		zap.S().Warnf("Time for renting is not specified. The nodes will be reserved for %v hours from now", hoursToReserve)
+	} else {
+		switch {
+		case hoursToReserve <= 0:
+			zap.S().Fatalf("You have specified invalid numer of hours - %v. Aborting reservation.\n", hoursToReserve)
+		case hoursToReserve > maximumRentingTime:
+			zap.S().Fatalf("Your time for renting is %v hours - exceeds maximum amount of hours - %v (1 week). "+
+				"Aborting reservation.\n", hoursToReserve, maximumRentingTime)
+		}
+	}
+
+	zap.S().Infof("**** Config **** \nfilePath=", filePath, "\nclusterId=", clusterID,
+		"\nNodes Requested=", requestedNumNodes, "\nURL_DB_CONN=", dbConn, "\nTime for rent (in hours):", hoursToReserve,
+		"\nRequested operating system:", requestedOperatingSystem, "\nOs version:", osVersion)
 
 	//configData := mapr.GetConfigObject(filePath)
 
-	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem)
+	nodes := mapr.GetAvailableNodes("sharedpool", requestedOperatingSystem, osVersion)
 	if len(nodes) < requestedNumNodes {
-		errorStr := "Can't full request. Only " + strconv.Itoa(len(nodes)) + " nodes available matching your request requirements"
-		log.Fatal(errorStr)
+		zap.S().Fatalf("Can't fulfill request. Only %v nodes available matching your request requirements", strconv.Itoa(len(nodes)))
 	}
 
 	if len(nodes) == 0 {
-		log.Fatal("Must submit a non-zero number of nodes. eg -n 1")
+		zap.S().Fatal("Must submit a non-zero number of nodes. eg -n 1")
 	}
 
 	// Check if a constraint for RAM is posed at all
 	switch {
 	case !c.IsSet("ram"): // Check if the flag is set at all
-		fmt.Println("You have not provided RAM constraint for VMs in a cluster , thus RAM limitations will be neglected")
+		zap.S().Warn("You have not provided RAM constraint for VMs in a cluster , thus RAM limitations will be neglected")
 	case ram <= 0:
-		log.Fatalf("You have provided invalid value for RAM constraint - %v. Aborting reserving.", ram)
+		zap.S().Fatalf("You have provided invalid value for RAM constraint - %v. Aborting reserving.", ram)
 	case ram > 0: // Constraint is present
 		// Check if there are enough nodes with RAM equal or more than needed
 		numOfRAMPassingNodes := 0 // Number of nodes that adhere to RAM constraints
@@ -70,14 +96,13 @@ func start(c *cli.Context) error {
 			}
 		}
 		if numOfRAMPassingNodes < requestedNumNodes {
-			log.Fatalf("You are trying to reserve %d nodes. There are %d matching nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPassingNodes, ram)
-			return nil
+			zap.S().Fatalf("You are trying to reserve %d nodes. There are %d matching nodes but only %d nodes have %d or more RAM", requestedNumNodes, len(nodes), numOfRAMPassingNodes, ram)
 		}
 	}
 
-	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly")
+	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly", hoursToReserve)
 	if err != nil {
-		fmt.Println("error calling MakeReservation", err)
+		zap.S().Fatalf("error calling MakeReservation", err)
 	}
 
 	//fmt.Println("Reservation=", reservation)
@@ -130,6 +155,22 @@ func main() {
 				Name:    "ram",
 				Aliases: []string{"m"},
 				Usage:   "VMs RAM in gigabytes. All vms in the cluster should have equal or more than specified RAM",
+			},
+			&cli.IntFlag{
+				Name:    "hourstoreserve",
+				Aliases: []string{"hours"},
+				Value:   24,
+				Usage:   "Number of hours for reservation",
+			},
+			&cli.StringFlag{
+				Name:    "osversion",
+				Aliases: []string{"nodeosversion"},
+				Usage:   "Specific version of OS of the node",
+			},
+			&cli.StringFlag{
+				Name:    "loglevel",
+				Aliases: []string{"l"},
+				Usage:   "Log level",
 			},
 		},
 		Name:   "vmrenter",
