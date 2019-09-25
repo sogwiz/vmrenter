@@ -2,7 +2,7 @@ package mapr
 
 import (
 	"encoding/json"
-	"fmt"
+	"go.uber.org/zap"
 	"io/ioutil"
 	"path"
 	"path/filepath"
@@ -46,7 +46,7 @@ func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool
 	//configData.Clusters = make([]models.Cluster, 0)
 	configData.Clusters = append(configData.Clusters, clusterToReserve)
 
-	fmt.Println(configData.Clusters)
+	zap.S().Info(configData.Clusters)
 
 	if generateESXIEntries {
 
@@ -57,16 +57,16 @@ func GenerateConfigJson(reservation models.Reservation, generateESXIEntries bool
 	outFilepath := filepath.FromSlash(outDir + "/out.json")
 	error := ioutil.WriteFile(outFilepath, outFile, 0644)
 	if error != nil {
-		fmt.Println("Couldn't write to json file", error)
+		zap.S().Error("Couldn't write to json file", error)
 	}
-	fmt.Println("Wrote cluster " + reservation.ClusterID + " to " + outFilepath)
+	zap.S().Infof("Wrote cluster %v to %v", reservation.ClusterID, outFilepath)
 }
 
 func GetConfigObject(filePath string) models.FileContent {
 
 	theFile, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	var configData models.FileContent
@@ -74,7 +74,7 @@ func GetConfigObject(filePath string) models.FileContent {
 	err = json.Unmarshal(theFile, &configData)
 
 	if err != nil {
-		fmt.Println("Error during unmarshal", err)
+		zap.S().Error("Error during unmarshal", err)
 	}
 
 	return configData

@@ -1,28 +1,28 @@
 package utils
 
 import (
-	"fmt"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 	"testing"
 	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
 )
 
 func TestGetNodesFromCSV(t *testing.T) {
-	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
+	csvFilename := "/home/vlad/Work/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 	assert.True(t, len(nodes) > 0, "couldn't load nodes from csv to memory data model")
 }
 
 func TestGetNodeJsonDocString(t *testing.T) {
-	csvFilename := "/Users/sargonbenjamin/Downloads/nodes.csv"
+	csvFilename := "/home/vlad/Work/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 
 	nodeStrings := make([]string, 0)
 
 	for _, node := range nodes {
 		nodeJsonStr := getNodeJsonDocString(node)
-		fmt.Println(nodeJsonStr)
+		zap.S().Info(nodeJsonStr)
 		nodeStrings = append(nodeStrings, nodeJsonStr)
 	}
 
@@ -31,18 +31,19 @@ func TestGetNodeJsonDocString(t *testing.T) {
 
 func writeNodeToDb(goroutineId int, jobs <-chan models.Node, results chan<- map[string]interface{}) {
 	for node := range jobs {
-		fmt.Printf("Worker %d starts job %v", goroutineId, node)
+		zap.S().Info("Worker %d starts job %v", goroutineId, node)
 		mapIntface := GetNodeJsonDocMap(node)
 		mapIntface["_id"] = node.ID
 		err := mapr.WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
 		if err != nil {
-			fmt.Println("Error writing to table", err)
+			zap.S().Errorf("Error writing to table", err)
 		}
 		results <- mapIntface
 	}
 }
 
 func TestDataSeed(t *testing.T) {
+	//csvFilename := "/home/vlad/Work/nodes.csv"
 	csvFilename := "/home/user6bb0/Work/vm-renter/nodes.csv"
 	nodes := GetNodesFromCSV(csvFilename)
 
@@ -103,7 +104,7 @@ func TestDataSeed(t *testing.T) {
 	for i := 0; i < len(nodes); i++ {
 		res := <-results
 		listOfMaps = append(listOfMaps, res)
-		fmt.Println("Finished with result", res["_id"])
+		zap.S().Info("Finished with result", res["_id"])
 	}
 
 	assert.True(t, len(listOfMaps) > 0, "couldn't load nodes to map")
@@ -142,5 +143,5 @@ func TestGetNodeOperatingSystems(t *testing.T) {
 		"10.10.30.71", "10.10.30.72",
 	}
 	nodes := getNodeOperatingSystems(ips)
-	fmt.Println(nodes)
+	zap.S().Info(nodes)
 }

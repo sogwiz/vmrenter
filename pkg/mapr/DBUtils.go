@@ -3,6 +3,7 @@ package mapr
 import (
 	"encoding/json"
 	"fmt"
+	"go.uber.org/zap"
 	"strings"
 	"sync"
 	"time"
@@ -29,24 +30,24 @@ func GetConnection() (*client.Connection, error) {
 
 func IsRequestDoable(numNodes int, osName string, osVersion string) bool {
 
-	fmt.Println("Request: ", numNodes, osName)
+	zap.S().Info("Request: ", numNodes, osName)
 
-	nodeDBJsons := GetAvailableNodes("", "centos")
+	nodeDBJsons := GetAvailableNodes("", "centos", "7.3")
 
-	fmt.Println("Available nodes ", len(nodeDBJsons))
+	zap.S().Info("Available nodes ", len(nodeDBJsons))
 	if len(nodeDBJsons) < numNodes {
-		fmt.Println("Can't fulfill this request unfortunately")
+		zap.S().Error("Can't fulfill this request unfortunately")
 		return false
 	}
 
-	fmt.Println("Can fullfill request")
+	zap.S().Info("Can fullfill request")
 	return true
 }
 
-func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDBJson {
+func GetAvailableNodes(clusterID string, operatingSystem string, osVersion string) []models.NodeDBJson {
 	connection, err := GetConnection()
 	if err != nil {
-		fmt.Println("error getting connection", err)
+		zap.S().Error("error getting connection", err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -58,17 +59,17 @@ func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 
 	store, err := connection.GetStore(tableNodes)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// query for nodes where the ExpiresAt field has already passed
-	//now.Add(3*24*time.Hour)
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}}] }}`, operatingSystem, time.Now().Format(time.RFC3339))
-	fmt.Println(queryStr)
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}},{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}}] }}`,
+		operatingSystem, time.Now().Format(time.RFC3339), osVersion)
+	zap.S().Info(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	nodeDBJsons := make([]models.NodeDBJson, 0)
@@ -77,12 +78,8 @@ func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 	for _, doc := range findResult.DocumentList() {
 		tmpNode := models.NodeDBJson{}
 		tmp, _ := json.Marshal(doc)
-		//fmt.Println(err)
-		//fmt.Println(string(tmp))
 		err = json.Unmarshal(tmp, &tmpNode)
 		nodeDBJsons = append(nodeDBJsons, tmpNode)
-		//fmt.Println(err)
-		//fmt.Println(tmpNode)
 	}
 
 	return nodeDBJsons
@@ -91,7 +88,7 @@ func GetAvailableNodes(clusterID string, operatingSystem string) []models.NodeDB
 func getAllNodes() []models.NodeDBJson {
 	connection, err := GetConnection()
 	if err != nil {
-		fmt.Println("error getting connection", err)
+		zap.S().Error("error getting connection", err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -102,12 +99,12 @@ func getAllNodes() []models.NodeDBJson {
 
 	store, err := connection.GetStore(tableNodes)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	findResult, err := store.FindAll(options)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	nodeDBJsons := make([]models.NodeDBJson, 0)
@@ -116,12 +113,8 @@ func getAllNodes() []models.NodeDBJson {
 	for _, doc := range findResult.DocumentList() {
 		tmpNode := models.NodeDBJson{}
 		tmp, _ := json.Marshal(doc)
-		//fmt.Println(err)
-		//fmt.Println(string(tmp))
 		err = json.Unmarshal(tmp, &tmpNode)
 		nodeDBJsons = append(nodeDBJsons, tmpNode)
-		//fmt.Println(err)
-		//fmt.Println(tmpNode)
 	}
 
 	return nodeDBJsons
@@ -130,7 +123,7 @@ func getAllNodes() []models.NodeDBJson {
 func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node {
 	connection, err := GetConnection()
 	if err != nil {
-		fmt.Println("error getting connection", err)
+		zap.S().Error("error getting connection", err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -141,20 +134,20 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 
 	store, err := connection.GetStore(tableNodes)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3 * 24 * time.Hour).Format(time.RFC3339))
-	fmt.Println(queryStr)
+	zap.S().Info(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// Print OJAI Documents from document stream
 	for _, doc := range findResult.DocumentList() {
-		fmt.Println(doc)
+		zap.S().Info(doc)
 	}
 
 	return nil
@@ -162,7 +155,7 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 }
 
 func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error {
-	fmt.Println("The time is", time.Now())
+	zap.S().Info("The time is ", time.Now())
 
 	connectionString := config.GetURLDBConn()
 
@@ -171,12 +164,12 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 
 	//fmt.Println("Connection string is ", connectionString)
 	if connectionString == "" {
-		panic("Connection string must not be empty")
+		zap.S().Fatal("Connection string must not be empty")
 	}
 	connection, err := client.MakeConnection(connectionString)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -185,7 +178,7 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 	store, err := connection.GetStore(storeName)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	newDocument := connection.CreateDocumentFromMap(inputMap)
@@ -193,7 +186,7 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 	err = store.InsertOrReplaceDocument(newDocument)
 
 	if err != nil {
-		fmt.Println("Error calling InsertOrReplaceDocument", err)
+		zap.S().Info("Error calling InsertOrReplaceDocument", err)
 	}
 	// Options for find request
 	//options := &client.FindOptions{ResultAsDocument: true}
@@ -217,18 +210,18 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 }
 
 func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
-	fmt.Println(nodeID)
+	zap.S().Info(nodeID)
 	connectionString := config.GetURLDBConn()
 
 	storeName := tableNodes
 
 	if connectionString == "" {
-		panic("Connection string must not be empty")
+		zap.S().Fatal("Connection string must not be empty")
 	}
 	connection, err := client.MakeConnection(connectionString)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -237,7 +230,7 @@ func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
 	store, err := connection.GetStore(storeName)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	mutation := map[string]interface{}{"$set": []interface{}{
@@ -257,14 +250,14 @@ func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
 	err = store.Update(docID, docMutation)
 
 	if err != nil {
-		fmt.Println("Error updating node", err)
+		zap.S().Error("Error updating node", err)
 		return err
 	}
 	return nil
 }
 
 func WriteToDBWithTable(inputStr string, table string) (*client.Document, error) {
-	fmt.Println("The time is", time.Now())
+	zap.S().Info("The time is", time.Now())
 
 	connectionString := config.GetURLDBConn()
 
@@ -272,12 +265,12 @@ func WriteToDBWithTable(inputStr string, table string) (*client.Document, error)
 	storeName := table
 
 	if connectionString == "" {
-		panic("Connection string must not be empty")
+		zap.S().Fatal("Connection string must not be empty")
 	}
 	connection, err := client.MakeConnection(connectionString)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -286,7 +279,7 @@ func WriteToDBWithTable(inputStr string, table string) (*client.Document, error)
 	store, err := connection.GetStore(storeName)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	newDocument, err := connection.CreateDocumentFromString(inputStr)
@@ -298,7 +291,7 @@ func WriteToDBWithTable(inputStr string, table string) (*client.Document, error)
 	err = store.InsertOrReplaceDocument(newDocument)
 
 	if err != nil {
-		fmt.Println("Error calling InsertOrReplaceDocument", err)
+		zap.S().Error("Error calling InsertOrReplaceDocument", err)
 	}
 	// Options for find request
 	//options := &client.FindOptions{ResultAsDocument: true}
@@ -329,14 +322,15 @@ func WriteToDB(inputStr string) (*client.Document, error) {
  - 1. nodes table : update the clusterID and expiresAT for each node
  - 2. reservations table:
 */
-func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJson, jenkinsJobURL string, reservationType string) (models.Reservation, error) {
+func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJson, jenkinsJobURL string,
+	reservationType string, hoursToReserve int) (models.Reservation, error) {
 
 	if len(nodes) > 5 && requestor != "sbenjamin@mapr.com" {
-		panic("Can't request more than 5 nodes")
+		zap.S().Fatal("Can't request more than 5 nodes")
 	}
 
 	now := time.Now()
-	expiry := now.Add(24 * time.Hour)
+	expiry := now.Add(time.Duration(hoursToReserve) * time.Hour)
 
 	var wg sync.WaitGroup
 	for i, _ := range nodes {
@@ -350,7 +344,7 @@ func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJs
 			defer wg.Done()
 			err := ReserveNode(node.ID, node.ExpiresAT, node.ClusterID)
 			if err != nil {
-				fmt.Println("Found error for node", node, err)
+				zap.S().Error("Found error for node", node, err)
 			}
 		}(node)
 	}
@@ -379,16 +373,16 @@ func Reset(tableName string) error {
 	connectionString := config.GetURLDBConn()
 
 	//options := &client.ConnectionOptions{MaxAttempt:3, WaitBetweenSeconds:10, CallTimeoutSeconds:60}
-	fmt.Println("Connection string is: ", connectionString)
+	zap.S().Info("Connection string is: ", connectionString)
 
 	if connectionString == "" {
-		panic("Connection string must not be empty")
+		zap.S().Fatal("Connection string must not be empty")
 	}
 
 	connection, err := client.MakeConnection(connectionString)
 
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -396,11 +390,11 @@ func Reset(tableName string) error {
 
 	error := connection.DeleteStore(tableName)
 	if error != nil {
-		fmt.Println("Couldn't delete table ", tableName, error)
+		zap.S().Error("Couldn't delete table ", tableName, error)
 	}
 	_, error = connection.CreateStore(tableName)
 	if error != nil {
-		fmt.Println("Couldn't create table ", tableName, error)
+		zap.S().Error("Couldn't create table ", tableName, error)
 	}
 
 	return error
@@ -409,7 +403,7 @@ func Reset(tableName string) error {
 func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesUpdate {
 	connection, err := GetConnection()
 	if err != nil {
-		fmt.Println("error getting connection", err)
+		zap.S().Error("error getting connection", err)
 	}
 
 	// this will get called when function exits after this point, irregardless of returning a value or error
@@ -421,7 +415,7 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 
 	store, err := connection.GetStore(tableNodes)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	// query for nodes where the ExpiresAt field has not passed yet
@@ -429,7 +423,7 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 
 	findResult, err := store.FindQueryString(query, options)
 	if err != nil {
-		panic(err)
+		zap.S().Fatal(err)
 	}
 
 	partialReservationsForNodesUpdate := make([]models.PartialReservationForNodesUpdate, 0)
@@ -448,26 +442,26 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 
 // Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 func ExtractPartialNodesData() ([]models.PartialReservationForNodesUpdate, error) {
-	fmt.Println("Starting getting nodes id, ExpiresAT, ClusterID...")
+	zap.S().Info("Starting getting nodes id, ExpiresAT, ClusterID...")
 	partialNodes := GetPartialReservationsForNodesUpdate()
 	err := Reset("/user/mapr/nodes")
 	if err != nil {
-		fmt.Printf("Error occured while resetting /user/mapr/nodes table: %v", err)
+		zap.S().Errorf("Error occured while resetting /user/mapr/nodes table: %v", err)
 		return nil, err
 	}
-	fmt.Println("Finished getting nodes id, ExpiresAT, ClusterID!")
+	zap.S().Info("Finished getting nodes id, ExpiresAT, ClusterID!")
 	return partialNodes, err
 }
 
 func UpdateNodesTable(listOfMaps []map[string]interface{}) interface{} {
 	// Updating the nodes table
-	fmt.Println("Starting writing to nodes table...")
+	zap.S().Info("Starting writing to nodes table...")
 
 	// Synchronous way to update table until the error with goroutines is fixed
 	for _, mapIntface := range listOfMaps {
 		writeErr := WriteToDBWithTableMap(mapIntface, "/user/mapr/nodes")
 		if writeErr != nil {
-			fmt.Println("Error writing to table", writeErr)
+			zap.S().Errorf("Error writing to table", writeErr)
 		}
 	}
 
@@ -484,7 +478,7 @@ func UpdateNodesTable(listOfMaps []map[string]interface{}) interface{} {
 	//	}(mapIntface)
 	//}
 	//wg2.Wait()
-	fmt.Println("Finished writing to nodes table!")
+	zap.S().Info("Finished writing to nodes table!")
 
 	return nil
 }

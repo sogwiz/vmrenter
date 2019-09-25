@@ -5,8 +5,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
-	"log"
+	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"strconv"
@@ -58,7 +57,7 @@ func getNodeOperatingSystems(ips []string) []models.Node {
 		cmd.Stdout = &out
 		err := cmd.Run()
 		if err != nil {
-			log.Fatal(err)
+			zap.S().Fatal(err)
 		}
 
 		outstr := out.String()
@@ -102,7 +101,7 @@ func GetNodesFromCSV(csvFilename string) []models.Node {
 	reader := csv.NewReader(bufio.NewReader(csvFile))
 	lines, err := reader.ReadAll()
 	if err != nil {
-		log.Fatalf("error reading all lines: %v", err)
+		zap.S().Fatalf("error reading all lines: %v", err)
 	}
 
 	nodes := make([]models.Node, 0)
@@ -159,7 +158,7 @@ func getNodeJsonDocString(node models.Node) string {
 
 	nodeJson, err := json.Marshal(nodeDbJson)
 	if err != nil {
-		log.Fatalf("couldn't marshal obj to json: %v", err)
+		zap.S().Fatalf("couldn't marshal obj to json: %v", err)
 	}
 
 	return string(nodeJson)
@@ -175,7 +174,7 @@ func nodeCSVToJSonFile() {
 
 func CreateNodeDBJsons(nodes []models.Node) []map[string]interface{} {
 	listOfMaps := make([]map[string]interface{}, 0) // List of NodeDBJsons
-	fmt.Println("Starting creating NodeDBJsons from nodes...")
+	zap.S().Info("Starting creating NodeDBJsons from nodes...")
 
 	for _, node := range nodes {
 		mapIntface := GetNodeJsonDocMap(node)
@@ -183,6 +182,6 @@ func CreateNodeDBJsons(nodes []models.Node) []map[string]interface{} {
 		listOfMaps = append(listOfMaps, mapIntface)
 	}
 
-	fmt.Println("Finished creating NodeDBJsons from nodes!")
+	zap.S().Info("Finished creating NodeDBJsons from nodes!")
 	return listOfMaps
 }

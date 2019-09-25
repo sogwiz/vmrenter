@@ -25,19 +25,19 @@ func TestGetAvailableNodes(t *testing.T) {
 
 func TestMakeReservation(t *testing.T) {
 	numNodes := 1
-	nodes := GetAvailableNodes("sharedpool", "centos")
+	nodes := GetAvailableNodes("sharedpool", "centos", "7.3")
 	if len(nodes) < numNodes {
-		panic("Can't fulllfill request. exiting")
+		panic("Can't fulfill request. exiting")
 	}
 
-	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly")
+	reservation, error := MakeReservation("sharedcluster", "sbenjamin@mapr.com", nodes[0:numNodes], "jenkinsurl", "vmsonly", 24)
 
 	if error != nil {
 		fmt.Println("Error making reservation", error)
 	}
 
 	fmt.Println(reservation)
-	GenerateConfigJson(reservation, false, "/Users/sargonbenjamin/dev/src/private-installer/testing/configuration/config.json")
+	GenerateConfigJson(reservation, false, "/home/vlad/Work/sample-config.json")
 }
 
 func TestReset(t *testing.T) {
