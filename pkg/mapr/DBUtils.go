@@ -10,7 +10,6 @@ import (
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/models"
 
-
 	client "github.com/mapr/maprdb-go-client"
 )
 
@@ -63,8 +62,16 @@ func GetAvailableNodes(clusterID string, operatingSystem string, osVersion strin
 	}
 
 	// query for nodes where the ExpiresAt field has already passed
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},{"$lt":{"ExpiresAT": "%s"}},{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}}] }}`,
-		operatingSystem, time.Now().Format(time.RFC3339), osVersion)
+	queryStr := fmt.Sprintf(`
+{"$where":{"$and":[
+	{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},
+	{"$lt":{"ExpiresAT": "%s"}},
+	{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}},
+	{"$eq":{"Online": %t}},
+	{"$eq":{"Included":%t}}
+]}}`,
+		operatingSystem, time.Now().Format(time.RFC3339), osVersion, true, true)
+
 	zap.S().Info(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
@@ -438,7 +445,6 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 
 	return partialReservationsForNodesUpdate
 }
-
 
 // Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 func ExtractPartialNodesData() ([]models.PartialReservationForNodesUpdate, error) {
