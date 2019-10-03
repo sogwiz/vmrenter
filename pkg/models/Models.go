@@ -21,6 +21,7 @@ type NodeDBJson struct {
 	ExpiresAT string
 	Online    bool
 	Included  bool
+	Note     string
 }
 
 type Esxi struct {
