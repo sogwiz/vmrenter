@@ -28,7 +28,7 @@ func ConfigureLogger(logLevel string) error {
 			cfg = zap.Config{
 				Encoding:    "json",
 				Level:       zap.NewAtomicLevelAt(zapLevel),
-				OutputPaths: []string{"stdout"},
+				OutputPaths: []string{"stdout", "./logs.log"},
 				EncoderConfig: zapcore.EncoderConfig{
 					MessageKey:    "message",
 					LevelKey:      "level",

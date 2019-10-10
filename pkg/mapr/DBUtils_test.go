@@ -80,6 +80,21 @@ func TestUnreserveNodes(t *testing.T) {
 	}
 }
 
+func TestReserveNodes(t *testing.T) {
+	now := time.Now()
+	expiry := now.Add(108 * time.Hour)
+
+	nodeIds := [2]string{"node.10.10.108.231", "node.10.10.108.233"}
+
+	for _, nodeId := range nodeIds {
+		err := ReserveNode(nodeId, expiry.Format(time.RFC3339), "sargon")
+		if err != nil {
+			fmt.Println("Error reserving node", err)
+		}
+	}
+
+}
+
 func TestDeleteAndCreateTable(t *testing.T) {
 
 	url := "https://mapr:mapr@10.10.99.165:8443/rest/table/delete"
