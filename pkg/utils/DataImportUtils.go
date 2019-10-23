@@ -115,7 +115,7 @@ func GetNodesFromCSV(csvFilename string) []models.Node {
 		esxiID, _ := strconv.Atoi(line[5])
 		snapshotID, _ := strconv.Atoi(line[6])
 		ram, _ := strconv.Atoi(line[13])
-		cv, _ := strconv.ParseBool(line[14])
+		isCV, _ := strconv.ParseBool(line[14])
 		node := models.Node{
 			ID:           line[0],
 			Host:         line[1],
@@ -133,7 +133,7 @@ func GetNodesFromCSV(csvFilename string) []models.Node {
 			RAM:      ram,
 			Username: os.Getenv("DEFAULT_USERNAME"),
 			Password: os.Getenv("DEFAULT_PASSWORD"),
-			CV: cv,
+			IsCV:     isCV,
 		}
 
 		nodes = append(nodes, node)
