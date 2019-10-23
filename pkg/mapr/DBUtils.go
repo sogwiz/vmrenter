@@ -67,10 +67,9 @@ func GetAvailableNodes(clusterID string, operatingSystem string, osVersion strin
 	{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},
 	{"$lt":{"ExpiresAT": "%s"}},
 	{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}},
-	{"$eq":{"Online": %t}},
-	{"$eq":{"Included":%t}}
+	{"$eq":{"Offline": %t}},
 ]}}`,
-		operatingSystem, time.Now().Format(time.RFC3339), osVersion, true, true)
+		operatingSystem, time.Now().Format(time.RFC3339), osVersion, false)
 
 	zap.S().Info(queryStr)
 
