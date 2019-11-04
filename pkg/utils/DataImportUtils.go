@@ -144,7 +144,7 @@ func GetNodeJsonDocMap(node models.Node) map[string]interface{} {
 	nodeDbJson := models.NodeDBJson{
 		NodeObj: node,
 		ID:      node.ID,
-		Offline: false,
+		isOffline: false,
 	}
 
 	return structs.Map(nodeDbJson)

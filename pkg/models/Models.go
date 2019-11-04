@@ -19,7 +19,7 @@ type NodeDBJson struct {
 	NodeObj   Node
 	ClusterID string
 	ExpiresAT string
-	Offline   bool
+	isOffline   bool
 	Note      string
 }
 
