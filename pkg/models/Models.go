@@ -12,6 +12,7 @@ type Node struct {
 	Esxi                 Esxi     `json:"esxi"`
 	ExpectedServiceNames []string `json:"expectedServiceNames"`
 	RAM                  int      `json:"RAM"`
+	IsCV                 bool     `json:"isCV"`
 }
 
 type NodeDBJson struct {
