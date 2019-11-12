@@ -20,6 +20,8 @@ type NodeDBJson struct {
 	NodeObj   Node
 	ClusterID string
 	ExpiresAT string
+	isOffline   bool
+	Note      string
 }
 
 type Esxi struct {
