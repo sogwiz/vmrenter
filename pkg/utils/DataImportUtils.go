@@ -5,12 +5,13 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
-	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"vmrenter/pkg/models"
+
+	"go.uber.org/zap"
 
 	"github.com/fatih/structs"
 )
@@ -144,9 +145,9 @@ func GetNodesFromCSV(csvFilename string) []models.Node {
 
 func GetNodeJsonDocMap(node models.Node) map[string]interface{} {
 	nodeDbJson := models.NodeDBJson{
-		NodeObj: node,
-		ID:      node.ID,
-		isOffline: false,
+		NodeObj:   node,
+		ID:        node.ID,
+		IsOffline: false,
 	}
 
 	return structs.Map(nodeDbJson)
