@@ -3,12 +3,13 @@ package mapr
 import (
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
 	"strings"
 	"sync"
 	"time"
 	"vmrenter/pkg/config"
 	"vmrenter/pkg/models"
+
+	"go.uber.org/zap"
 
 	client "github.com/mapr/maprdb-go-client"
 )
@@ -65,7 +66,7 @@ func GetAvailableNodes(clusterID string, operatingSystem string, osVersion strin
 	queryStr := fmt.Sprintf(`
 {"$where":{"$and":[
 	{"$matches":{"NodeObj.OperatingSystem.Name":"(?i)%s"}},
-	{"$lt":{"ExpiresAT": "%s"}},
+	{"$lt":{"ExpiresAt": "%s"}},
 	{"$matches":{"NodeObj.OperatingSystem.Version":"%s"}},
 	{"$or":[{"$notexists":"isOffline"},{"$eq":{"isOffline":%t}}]}
 ]}}`,
@@ -143,7 +144,7 @@ func getUnavailableNodes(clusterID string, operatingSystem string) []models.Node
 		zap.S().Fatal(err)
 	}
 
-	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3 * 24 * time.Hour).Format(time.RFC3339))
+	queryStr := fmt.Sprintf(`{"$where":{"$and":[{"$eq":{"Node.OperatingSystem.Name":"Ubuntu"}},{"$gt":{"ExpiresAt": "%s"}}] }}`, time.Now().Add(3*24*time.Hour).Format(time.RFC3339))
 	zap.S().Info(queryStr)
 
 	findResult, err := store.FindQueryString(queryStr, options)
@@ -215,7 +216,7 @@ func WriteToDBWithTableMap(inputMap map[string]interface{}, table string) error 
 
 }
 
-func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
+func ReserveNode(nodeID string, expiresAt string, clusterID string) error {
 	zap.S().Info(nodeID)
 	connectionString := config.GetURLDBConn()
 
@@ -240,12 +241,12 @@ func ReserveNode(nodeID string, expiresAT string, clusterID string) error {
 	}
 
 	mutation := map[string]interface{}{"$set": []interface{}{
-		map[string]interface{}{"ExpiresAT": expiresAT},
+		map[string]interface{}{"ExpiresAt": expiresAt},
 		map[string]interface{}{"ClusterID": clusterID},
 	},
 	}
-	//mutation := map[string]interface{}{"$set": map[string]interface{}{"ExpiresAT": expiresAT}}
-	//mutation := map[string]interface{}{"$set": []interface{}{{"ExpiresAT": expiresAT},{"ClusterID": clusterID}}}
+	//mutation := map[string]interface{}{"$set": map[string]interface{}{"ExpiresAt": expiresAt}}
+	//mutation := map[string]interface{}{"$set": []interface{}{{"ExpiresAt": expiresAt},{"ClusterID": clusterID}}}
 	//mutationStr := "{\"$set\":[{\"ExpiresAT\":" + expiresAT + "},{\"ClusterID\":" + clusterID + "}]}"
 
 	//mutation := map[string]interface{}{"$set": map[string]interface{}{"ExpiresAT": expiresAT}}
@@ -340,7 +341,7 @@ func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJs
 
 	var wg sync.WaitGroup
 	for i, _ := range nodes {
-		nodes[i].ExpiresAT = expiry.Format(time.RFC3339)
+		nodes[i].ExpiresAt = expiry.Format(time.RFC3339)
 		nodes[i].ClusterID = clusterID
 
 		node := nodes[i]
@@ -348,7 +349,7 @@ func MakeReservation(clusterID string, requestor string, nodes []models.NodeDBJs
 		wg.Add(1)
 		go func(node models.NodeDBJson) {
 			defer wg.Done()
-			err := ReserveNode(node.ID, node.ExpiresAT, node.ClusterID)
+			err := ReserveNode(node.ID, node.ExpiresAt, node.ClusterID)
 			if err != nil {
 				zap.S().Error("Found error for node", node, err)
 			}
@@ -425,7 +426,7 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 	}
 
 	// query for nodes where the ExpiresAt field has not passed yet
-	query := fmt.Sprintf(`{"$select":["_id","ExpiresAT","ClusterID"],"$where":{"$gt":{"ExpiresAT":"%v"}}}`, time.Now().Format(time.RFC3339))
+	query := fmt.Sprintf(`{"$select":["_id","ExpiresAt","ClusterID"],"$where":{"$gt":{"ExpiresAT":"%v"}}}`, time.Now().Format(time.RFC3339))
 
 	findResult, err := store.FindQueryString(query, options)
 	if err != nil {
@@ -447,14 +448,14 @@ func GetPartialReservationsForNodesUpdate() []models.PartialReservationForNodesU
 
 // Getting nodes id, ExpiresAt and ClusterID from /user/mapr/nodes table
 func ExtractPartialNodesData() ([]models.PartialReservationForNodesUpdate, error) {
-	zap.S().Info("Starting getting nodes id, ExpiresAT, ClusterID...")
+	zap.S().Info("Starting getting nodes id, ExpiresAt, ClusterID...")
 	partialNodes := GetPartialReservationsForNodesUpdate()
 	err := Reset("/user/mapr/nodes")
 	if err != nil {
 		zap.S().Errorf("Error occured while resetting /user/mapr/nodes table: %v", err)
 		return nil, err
 	}
-	zap.S().Info("Finished getting nodes id, ExpiresAT, ClusterID!")
+	zap.S().Info("Finished getting nodes id, ExpiresAt, ClusterID!")
 	return partialNodes, err
 }
 

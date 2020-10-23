@@ -1,11 +1,12 @@
 package utils
 
 import (
-	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"testing"
 	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
+
+	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
 
 func TestGetNodesFromCSV(t *testing.T) {

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"go.uber.org/zap"
-	"gopkg.in/urfave/cli.v2"
 	"log"
 	"os"
 	"sync"
@@ -11,13 +9,16 @@ import (
 	"vmrenter/pkg/mapr"
 	"vmrenter/pkg/models"
 	"vmrenter/pkg/utils"
+
+	"go.uber.org/zap"
+	"gopkg.in/urfave/cli.v2"
 )
 
 var nodesTable = "/user/mapr/nodes"
 
 // Creating NodeDBJsons from nodes
 func updateNodeDBJsons(partialNodes []models.PartialReservationForNodesUpdate, listOfMaps []map[string]interface{}) {
-	// Updating NodeDBJsons with ClusterID, ExpiresAT
+	// Updating NodeDBJsons with ClusterID, ExpiresAt
 	wg1 := sync.WaitGroup{}
 	m := &sync.Mutex{}
 	for _, partialNode := range partialNodes {
