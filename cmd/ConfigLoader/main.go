@@ -52,6 +52,7 @@ func start(c *cli.Context) error {
 	ram := c.Int("ram")
 	hoursToReserve := c.Int("hourstoreserve")
 	osVersion := c.String("nodeosversion")
+	requestjoburl := c.String("requestjoburl")
 
 	if !c.IsSet("hourstoreserve") {
 		hoursToReserve = 24
@@ -100,7 +101,7 @@ func start(c *cli.Context) error {
 		}
 	}
 
-	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], "http://jenkinshost:jenkinsport/view/VIEW_NAME/job/JOB_NAME/5607/", "vmsonly", hoursToReserve)
+	reservation, err := mapr.MakeReservation(clusterID, emailAddr, nodes[0:requestedNumNodes], requestjoburl, "vmsonly", hoursToReserve)
 	if err != nil {
 		zap.S().Fatalf("error calling MakeReservation", err)
 	}
@@ -172,6 +173,11 @@ func main() {
 				Aliases: []string{"l"},
 				Value:   "Info",
 				Usage:   "Log level",
+			},
+			&cli.StringFlag{
+				Name:    "requestjoburl",
+				Aliases: []string{"jurl"},
+				Usage:   "VM renter jenkins job url",
 			},
 		},
 		Name:   "vmrenter",
